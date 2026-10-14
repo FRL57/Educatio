@@ -1,0 +1,783 @@
+<title>Conjugo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;700&family=Kalam:wght@700&display=swap">
+<style>
+/* Mise en page : une colonne façon cahier d'écolier (Seyès + marge rouge), corrections au « stylo rouge ». */
+:root {
+  --paper: #f5f7fc;
+  --surface: #ffffff;
+  --ink: #1b2a52;
+  --ink-soft: #5a6690;
+  --rule: #dde5f5;
+  --rule-strong: #c3d1ee;
+  --margin: #ec8f9a;
+  --accent: #2c56cf;
+  --accent-soft: #e5ecfc;
+  --red: #c42a3b;
+  --red-soft: #fcebed;
+  --green: #17845a;
+  --green-soft: #e3f5ec;
+  --term: #b6510a;
+  --term-soft: #fdf0e3;
+  --font-body: "Lexend", "Segoe UI", system-ui, sans-serif;
+  --font-hand: "Kalam", "Segoe Print", "Comic Sans MS", cursive;
+  --radius: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10172b; --surface: #18223d; --ink: #e6ebf8; --ink-soft: #9ea9cb;
+    --rule: #1f2b4a; --rule-strong: #2a3961; --margin: #8a4352;
+    --accent: #8eaaff; --accent-soft: #24335c; --red: #ff8590; --red-soft: #3a1f2c;
+    --green: #5ad49f; --green-soft: #17362d; --term: #ffad66; --term-soft: #3a2a1c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10172b; --surface: #18223d; --ink: #e6ebf8; --ink-soft: #9ea9cb;
+  --rule: #1f2b4a; --rule-strong: #2a3961; --margin: #8a4352;
+  --accent: #8eaaff; --accent-soft: #24335c; --red: #ff8590; --red-soft: #3a1f2c;
+  --green: #5ad49f; --green-soft: #17362d; --term: #ffad66; --term-soft: #3a2a1c;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--paper); color: var(--ink);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.55;
+}
+.wrap { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; display: grid; gap: 20px; }
+
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.brand h1 { margin: 0; font-size: 1.9rem; font-weight: 700; letter-spacing: -0.02em; }
+.brand h1 span { color: var(--accent); }
+.brand p { margin: 0; color: var(--ink-soft); font-size: 0.95rem; }
+
+button { font: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.btn {
+  border: 0; border-radius: 10px; padding: 12px 20px; font-weight: 500;
+  background: var(--accent); color: var(--surface);
+}
+.btn:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; color: var(--accent); border: 1.5px solid var(--rule-strong); }
+.btn.ghost:hover { background: var(--accent-soft); }
+
+/* Barre de progression */
+.status { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 0.9rem; color: var(--ink-soft); }
+.dots { display: flex; gap: 6px; flex-wrap: wrap; }
+.dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--rule-strong); background: var(--surface); }
+.dot.ok { background: var(--green); border-color: var(--green); }
+.dot.ko { background: var(--red); border-color: var(--red); }
+.dot.now { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.counters { display: flex; gap: 16px; font-variant-numeric: tabular-nums; }
+.counters b { color: var(--ink); }
+
+/* Carte question façon cahier */
+.cahier {
+  background-color: var(--surface);
+  background-image:
+    linear-gradient(to right, transparent 44px, var(--margin) 44px, var(--margin) 46px, transparent 46px),
+    repeating-linear-gradient(to bottom, transparent 0 31px, var(--rule-strong) 31px 32px),
+    repeating-linear-gradient(to bottom, transparent 0 7px, var(--rule) 7px 8px);
+  border: 1px solid var(--rule-strong); border-radius: var(--radius);
+  padding: 24px 24px 24px 64px; display: grid; gap: 14px;
+}
+.consigne { margin: 0; color: var(--ink-soft); font-size: 0.95rem; letter-spacing: 0.02em; }
+.consigne strong { color: var(--accent); font-weight: 700; }
+.verbe-line { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.infinitif { font-size: 2.2rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
+.chip { font-size: 0.78rem; font-weight: 500; padding: 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); letter-spacing: 0.03em; }
+form.reponse { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.sujet { font-size: 1.6rem; font-weight: 500; }
+#answer {
+  font: inherit; font-size: 1.6rem; font-weight: 500; color: var(--accent);
+  flex: 1 1 200px; min-width: 0; padding: 4px 6px;
+  background: transparent; border: 0; border-bottom: 2.5px solid var(--accent);
+}
+#answer:disabled { color: var(--ink); border-bottom-color: var(--rule-strong); }
+.accents { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.accents small { color: var(--ink-soft); margin-right: 4px; }
+.accents button {
+  min-width: 38px; height: 38px; border-radius: 8px; font-size: 1.1rem;
+  border: 1px solid var(--rule-strong); background: var(--surface); color: var(--ink);
+}
+.accents button:hover { background: var(--accent-soft); }
+.hint { margin: 0; min-height: 1.2em; color: var(--red); font-size: 0.9rem; }
+
+/* Retour */
+.feedback { border-radius: var(--radius); padding: 20px 22px; display: grid; gap: 16px; border: 1.5px solid; }
+.feedback.ok { background: var(--green-soft); border-color: var(--green); }
+.feedback.ko { background: var(--surface); border-color: var(--red); }
+.verdict { font-family: var(--font-hand); font-size: 1.9rem; line-height: 1.1; margin: 0; }
+.ok .verdict { color: var(--green); }
+.ko .verdict { color: var(--red); }
+.compare { display: flex; gap: 10px 24px; flex-wrap: wrap; font-size: 1.15rem; }
+.compare .barre { text-decoration: line-through; text-decoration-color: var(--red); text-decoration-thickness: 2px; color: var(--ink-soft); }
+.label { display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); }
+.decomp { font-size: 1.35rem; font-weight: 500; }
+.rad { color: var(--ink); }
+.term { color: var(--term); background: var(--term-soft); border-radius: 4px; padding: 0 3px; font-weight: 700; }
+.diag { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.diag li { padding-left: 16px; border-left: 3px solid var(--red); }
+.ok .diag li { border-left-color: var(--green); }
+.regle { background: var(--accent-soft); border-radius: 10px; padding: 14px 16px; display: grid; gap: 8px; }
+.regle h3 { margin: 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); }
+.regle p { margin: 0; }
+.terms-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.terms-row span { padding: 2px 8px; border-radius: 6px; background: var(--surface); font-size: 0.9rem; }
+.terms-row span.here { background: var(--term); color: var(--surface); font-weight: 700; }
+.tableau { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; }
+.tableau div { padding: 4px 8px; border-radius: 6px; font-size: 1.05rem; }
+.tableau div.here { background: var(--term-soft); outline: 2px solid var(--term); }
+.tableau .pr { color: var(--ink-soft); }
+.next-row { display: flex; justify-content: flex-end; }
+
+/* Réglages */
+.panel { background: var(--surface); border: 1px solid var(--rule-strong); border-radius: var(--radius); padding: 20px 22px; display: grid; gap: 18px; }
+.panel h2 { margin: 0; font-size: 1.2rem; }
+fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 8px; }
+legend { font-weight: 500; margin-bottom: 6px; padding: 0; }
+.options { display: flex; flex-wrap: wrap; gap: 8px; }
+.opt { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1.5px solid var(--rule-strong); border-radius: 10px; cursor: pointer; }
+.opt:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.opt.off { opacity: 0.55; cursor: not-allowed; }
+.opt small { color: var(--ink-soft); }
+.panel-foot { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+
+/* Fin de série */
+.fin { text-align: left; }
+.score-big { font-size: 3rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.score-big small { font-size: 1.3rem; color: var(--ink-soft); }
+.erreurs { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.erreurs li { display: flex; gap: 10px; flex-wrap: wrap; padding: 6px 10px; background: var(--red-soft); border-radius: 8px; }
+.stats { color: var(--ink-soft); font-size: 0.9rem; margin: 0; }
+
+@media (max-width: 520px) {
+  .cahier { padding: 20px 16px 20px 40px;
+    background-image:
+      linear-gradient(to right, transparent 22px, var(--margin) 22px, var(--margin) 24px, transparent 24px),
+      repeating-linear-gradient(to bottom, transparent 0 31px, var(--rule-strong) 31px 32px),
+      repeating-linear-gradient(to bottom, transparent 0 7px, var(--rule) 7px 8px); }
+  .infinitif { font-size: 1.8rem; }
+  .tableau { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .feedback { animation: pop .25s ease-out; }
+  @keyframes pop { from { transform: translateY(6px); opacity: .6; } to { transform: none; opacity: 1; } }
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>Conju<span>go</span></h1>
+      <p>Entraînement à la conjugaison · 6e</p>
+    </div>
+    <button class="btn ghost" id="btn-reglages" type="button">Réglages</button>
+  </header>
+
+  <section class="panel" id="reglages" hidden>
+    <h2>Réglages</h2>
+    <fieldset>
+      <legend>Temps à travailler</legend>
+      <div class="options" id="opt-temps"></div>
+    </fieldset>
+    <fieldset>
+      <legend>Groupes de verbes</legend>
+      <div class="options">
+        <label class="opt"><input type="checkbox" id="g1" checked> 1er groupe <small>(-er)</small></label>
+        <label class="opt"><input type="checkbox" id="g2" checked> 2e groupe <small>(finir)</small></label>
+        <label class="opt"><input type="checkbox" id="g3" checked> 3e groupe <small>(être, prendre…)</small></label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Options</legend>
+      <div class="options">
+        <label class="opt"><input type="checkbox" id="opt-noms" checked> Sujets variés <small>(« Le chien », « Mes parents »…)</small></label>
+        <label class="opt"><input type="radio" name="longueur" id="len10" value="10" checked> Séries de 10</label>
+        <label class="opt"><input type="radio" name="longueur" id="len20" value="20"> Séries de 20</label>
+      </div>
+    </fieldset>
+    <p class="hint" id="reglages-hint"></p>
+    <div class="panel-foot">
+      <button class="btn" id="btn-appliquer" type="button">Commencer une nouvelle série</button>
+    </div>
+  </section>
+
+  <main id="jeu" style="display:grid; gap:20px">
+    <div class="status">
+      <div class="dots" id="dots" aria-label="Progression de la série"></div>
+      <div class="counters">
+        <span>Score : <b id="score">0</b></span>
+        <span>D'affilée : <b id="streak">0</b></span>
+      </div>
+    </div>
+
+    <article class="cahier" aria-live="polite">
+      <p class="consigne">Conjugue <strong id="temps-label">au présent</strong></p>
+      <div class="verbe-line">
+        <span class="infinitif" id="infinitif">manger</span>
+        <span class="chip" id="groupe">1er groupe</span>
+      </div>
+      <form class="reponse" id="form" autocomplete="off">
+        <label class="sujet" for="answer" id="sujet">tu</label>
+        <input id="answer" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="…">
+        <button class="btn" id="btn-verifier" type="submit">Vérifier</button>
+      </form>
+      <div class="accents" id="accents"><small>Accents :</small></div>
+      <p class="hint" id="hint"></p>
+    </article>
+
+    <section id="feedback" hidden></section>
+  </main>
+
+  <section class="panel fin" id="fin" hidden></section>
+</div>
+
+<script>
+/* =====================================================================
+   CONJUGO — architecture
+   - PERSONNES : les 6 personnes de conjugaison.
+   - VERBES    : la liste des verbes. Les verbes réguliers (1er et 2e groupe)
+                 sont calculés ; les verbes du 3e groupe donnent leurs formes
+                 par temps, ex. present: ['prend|s', …] (« | » sépare
+                 radical et terminaison, pour l'explication).
+   - TEMPS     : le registre des temps. Pour ajouter un temps (imparfait,
+                 futur…), il suffit d'y écrire une entrée avec :
+                   conjuguer(verbe) -> 6 × { radical, term }
+                   conseil(verbe, personne, term) -> phrase d'aide
+                   regle(verbe) -> HTML de la règle
+                 puis de passer disponible: true. Le reste (questions,
+                 correction, tableau) fonctionne sans changement.
+   ===================================================================== */
+
+const PERSONNES = [
+  { label: '1re personne du singulier', pronom: 'je', remplace: 'je' },
+  { label: '2e personne du singulier', pronom: 'tu', remplace: 'tu' },
+  { label: '3e personne du singulier', pronom: 'il / elle / on', remplace: 'il ou elle' },
+  { label: '1re personne du pluriel', pronom: 'nous', remplace: 'nous' },
+  { label: '2e personne du pluriel', pronom: 'vous', remplace: 'vous' },
+  { label: '3e personne du pluriel', pronom: 'ils / elles', remplace: 'ils ou elles' },
+];
+const PRONOMS_TIRAGE = [['je'], ['tu'], ['il', 'elle', 'on'], ['nous'], ['vous'], ['ils', 'elles']];
+const NOMS = {
+  2: ['Le chien', 'Ma sœur', 'Léo', 'Le professeur', 'Mon copain'],
+  5: ['Les élèves', 'Mes parents', 'Les oiseaux', 'Tom et Léa', 'Mes cousines'],
+};
+
+// ---------- Verbes ----------
+const V = (inf, g, extra = {}) => ({ inf, g, ...extra });
+const VERBES = [
+  // 1er groupe réguliers
+  ...['parler', 'chanter', 'aimer', 'jouer', 'regarder', 'écouter', 'marcher', 'travailler', 'arriver',
+      'donner', 'trouver', 'penser', 'habiter', 'crier', 'oublier', 'continuer', 'tomber', 'rester',
+      'demander', 'porter', 'raconter', 'dessiner'].map(i => V(i, 1)),
+  // 1er groupe avec particularités
+  ...['commencer', 'lancer', 'placer', 'avancer', 'prononcer'].map(i => V(i, 1, { mod: 'cer' })),
+  ...['manger', 'nager', 'ranger', 'partager', 'voyager', 'bouger'].map(i => V(i, 1, { mod: 'ger' })),
+  ...['appeler', 'jeter', 'rappeler'].map(i => V(i, 1, { mod: 'double' })),
+  ...['acheter', 'lever', 'mener', 'promener', 'peser', 'préférer', 'espérer', 'répéter', 'compléter'].map(i => V(i, 1, { mod: 'grave' })),
+  ...['nettoyer', 'envoyer', 'essuyer', 'employer', 'aboyer'].map(i => V(i, 1, { mod: 'yer' })),
+  // 2e groupe
+  ...['finir', 'choisir', 'grandir', 'réussir', 'remplir', 'obéir', 'réfléchir', 'rougir', 'applaudir',
+      'punir', 'agir', 'bâtir', 'maigrir', 'avertir'].map(i => V(i, 2)),
+  // 3e groupe
+  V('être', 3, { irr: true, present: ['suis', 'es', 'est', 'sommes', 'êtes', 'sont'],
+    note: 'Récite-le à voix haute : je suis, tu es, il est, nous sommes, vous êtes, ils sont. Attention : « vous êtes » ne se termine pas par -ez.' }),
+  V('avoir', 3, { irr: true, present: ['ai', 'as', 'a', 'avons', 'avez', 'ont'],
+    note: 'Récite-le à voix haute : j\'ai, tu as, il a, nous avons, vous avez, ils ont. « il a » ne prend jamais d\'accent.' }),
+  V('aller', 3, { irr: true, present: ['vais', 'vas', 'va', 'allons', 'allez', 'vont'],
+    note: '« aller » se termine par -er, mais c\'est un verbe du 3e groupe, très irrégulier : je vais, tu vas, il va, nous allons, vous allez, ils vont.' }),
+  V('faire', 3, { irr: true, present: ['fais', 'fais', 'fait', 'faisons', 'faites', 'font'],
+    note: 'Attention à « vous faites » (jamais « vous faisez ») et à « ils font ».' }),
+  V('dire', 3, { present: ['di|s', 'di|s', 'di|t', 'dis|ons', 'dites', 'dis|ent'],
+    note: 'Attention à « vous dites » (jamais « vous disez »).' }),
+  V('venir', 3, { present: ['vien|s', 'vien|s', 'vien|t', 'ven|ons', 'ven|ez', 'vienn|ent'], fam: 'venir' }),
+  V('tenir', 3, { present: ['tien|s', 'tien|s', 'tien|t', 'ten|ons', 'ten|ez', 'tienn|ent'], fam: 'venir' }),
+  V('prendre', 3, { present: ['prend|s', 'prend|s', 'prend|', 'pren|ons', 'pren|ez', 'prenn|ent'], fam: 'prendre' }),
+  V('apprendre', 3, { present: ['apprend|s', 'apprend|s', 'apprend|', 'appren|ons', 'appren|ez', 'apprenn|ent'], fam: 'prendre' }),
+  V('comprendre', 3, { present: ['comprend|s', 'comprend|s', 'comprend|', 'compren|ons', 'compren|ez', 'comprenn|ent'], fam: 'prendre' }),
+  V('pouvoir', 3, { present: ['peu|x', 'peu|x', 'peu|t', 'pouv|ons', 'pouv|ez', 'peuv|ent'], fam: 'pouvoir' }),
+  V('vouloir', 3, { present: ['veu|x', 'veu|x', 'veu|t', 'voul|ons', 'voul|ez', 'veul|ent'], fam: 'pouvoir' }),
+  V('voir', 3, { present: ['voi|s', 'voi|s', 'voi|t', 'voy|ons', 'voy|ez', 'voi|ent'], fam: 'y' }),
+  V('croire', 3, { present: ['croi|s', 'croi|s', 'croi|t', 'croy|ons', 'croy|ez', 'croi|ent'], fam: 'y' }),
+  V('savoir', 3, { present: ['sai|s', 'sai|s', 'sai|t', 'sav|ons', 'sav|ez', 'sav|ent'],
+    note: 'Le radical change : « sai- » au singulier (je sais), « sav- » au pluriel (nous savons).' }),
+  V('devoir', 3, { present: ['doi|s', 'doi|s', 'doi|t', 'dev|ons', 'dev|ez', 'doiv|ent'],
+    note: 'Trois radicaux : je dois, nous devons, ils doivent.' }),
+  V('recevoir', 3, { present: ['reçoi|s', 'reçoi|s', 'reçoi|t', 'recev|ons', 'recev|ez', 'reçoiv|ent'],
+    note: 'Le c prend une cédille devant o pour garder le son [s] : je reçois, ils reçoivent. Mais nous recevons (pas de cédille devant e).' }),
+  V('boire', 3, { present: ['boi|s', 'boi|s', 'boi|t', 'buv|ons', 'buv|ez', 'boiv|ent'],
+    note: 'Trois radicaux : je bois, nous buvons, ils boivent.' }),
+  V('mettre', 3, { present: ['met|s', 'met|s', 'met|', 'mett|ons', 'mett|ez', 'mett|ent'],
+    note: 'Un seul t au singulier (je mets, il met : on n\'ajoute pas de deuxième t), deux t au pluriel (nous mettons).' }),
+  V('partir', 3, { present: ['par|s', 'par|s', 'par|t', 'part|ons', 'part|ez', 'part|ent'], fam: 'partir' }),
+  V('sortir', 3, { present: ['sor|s', 'sor|s', 'sor|t', 'sort|ons', 'sort|ez', 'sort|ent'], fam: 'partir' }),
+  V('dormir', 3, { present: ['dor|s', 'dor|s', 'dor|t', 'dorm|ons', 'dorm|ez', 'dorm|ent'], fam: 'partir' }),
+  V('sentir', 3, { present: ['sen|s', 'sen|s', 'sen|t', 'sent|ons', 'sent|ez', 'sent|ent'], fam: 'partir' }),
+  V('courir', 3, { present: ['cour|s', 'cour|s', 'cour|t', 'cour|ons', 'cour|ez', 'cour|ent'],
+    note: 'Le radical « cour- » ne change pas : je cours, nous courons, ils courent.' }),
+  V('ouvrir', 3, { present: ['ouvr|e', 'ouvr|es', 'ouvr|e', 'ouvr|ons', 'ouvr|ez', 'ouvr|ent'], fam: 'ouvrir' }),
+  V('offrir', 3, { present: ['offr|e', 'offr|es', 'offr|e', 'offr|ons', 'offr|ez', 'offr|ent'], fam: 'ouvrir' }),
+  V('lire', 3, { present: ['li|s', 'li|s', 'li|t', 'lis|ons', 'lis|ez', 'lis|ent'], fam: 're' }),
+  V('écrire', 3, { present: ['écri|s', 'écri|s', 'écri|t', 'écriv|ons', 'écriv|ez', 'écriv|ent'], fam: 're' }),
+  V('vivre', 3, { present: ['vi|s', 'vi|s', 'vi|t', 'viv|ons', 'viv|ez', 'viv|ent'], fam: 're' }),
+  V('rire', 3, { present: ['ri|s', 'ri|s', 'ri|t', 'ri|ons', 'ri|ez', 'ri|ent'],
+    note: 'Le radical « ri- » ne change pas : je ris, nous rions, ils rient.' }),
+  V('connaître', 3, { present: ['connai|s', 'connai|s', 'connaî|t', 'connaiss|ons', 'connaiss|ez', 'connaiss|ent'],
+    fam: 'connaitre', alts: { 2: ['connait'] } }),
+  ...['rendre', 'vendre', 'attendre', 'répondre', 'entendre', 'perdre', 'descendre'].map(i => {
+    const r = i.slice(0, -2);
+    return V(i, 3, { present: [r + '|s', r + '|s', r + '|', r + '|ons', r + '|ez', r + '|ent'], fam: 'dre' });
+  }),
+];
+
+const NOTES_MOD = {
+  cer: 'Devant -ons, le c prend une cédille pour garder le son [s] : nous commençons (sinon on lirait « commenkons »).',
+  ger: 'Devant -ons, on garde un e après le g pour garder le son [j] : nous mangeons (sinon on lirait « mangons »).',
+  double: 'Quand la terminaison ne se prononce pas (-e, -es, -ent), on double la consonne : j\'appelle, ils jettent. Mais nous appelons, vous jetez.',
+  grave: 'Quand la terminaison ne se prononce pas (-e, -es, -ent), le e (ou le é) du radical devient è : j\'achète, il préfère, ils lèvent. Mais nous achetons, vous préférez.',
+  yer: 'Quand la terminaison ne se prononce pas (-e, -es, -ent), le y devient i : je nettoie, ils envoient. Mais nous nettoyons, vous envoyez.',
+};
+const NOTES_FAM = {
+  venir: '« venir » et « tenir » : « ie » au singulier (je viens), « e » avec nous et vous (nous venons), et « ils viennent » prend deux n.',
+  prendre: '« prendre » et ses cousins (apprendre, comprendre) : le d reste au singulier (je prends, il prend, sans t !), il disparaît au pluriel (nous prenons), et « ils prennent » prend deux n.',
+  pouvoir: '« pouvoir » et « vouloir » prennent un x avec je et tu : je peux, tu veux. Le radical change au pluriel : nous pouvons, ils peuvent.',
+  y: 'Avec nous et vous, le i devient y : je vois, nous voyons, vous voyez. Mais ils voient, avec un i.',
+  partir: 'Au singulier, la consonne qui est juste avant -ir disparaît : partir → je pars, dormir → je dors, sortir → je sors. Elle revient au pluriel : nous partons, nous dormons.',
+  ouvrir: '« ouvrir » et « offrir » se terminent par -ir, mais au présent ils prennent les terminaisons des verbes en -er : j\'ouvre, tu ouvres, il ouvre.',
+  re: 'Le radical s\'allonge au pluriel : je lis / nous lisons, j\'écris / nous écrivons, je vis / nous vivons.',
+  connaitre: 'Le i prend un accent circonflexe devant le t : il connaît. (Depuis la réforme de 1990, « il connait » sans accent est aussi accepté.)',
+  dre: 'Les verbes en -dre comme « rendre » gardent le d au singulier et ne prennent pas de t : je rends, tu rends, il rend.',
+};
+
+// Confusions de mots qui se prononcent pareil
+const HOMOPHONES = {
+  avoir: { 2: { faux: ['à'], msg: '« à » avec un accent est une petite préposition (je vais à l\'école). Le verbe avoir s\'écrit « a » sans accent : il a. Astuce : si tu peux dire « il avait », c\'est « a ».' },
+           5: { faux: ['on'], msg: '« on » est un pronom (on joue). Le verbe avoir s\'écrit « ont » : ils ont. Astuce : si tu peux dire « ils avaient », c\'est « ont ».' } },
+  être: { 2: { faux: ['et', 'é', 'es', 'ai'], msg: '« et » sert à relier deux mots (toi et moi). Le verbe être s\'écrit « est » : il est. Astuce : si tu peux dire « il était », c\'est « est ».' },
+          5: { faux: ['son'], msg: '« son » veut dire « le sien » (son vélo). Le verbe être s\'écrit « sont » : ils sont. Astuce : si tu peux dire « ils étaient », c\'est « sont ».' } },
+};
+
+// ---------- Présent ----------
+const TERM = {
+  1: ['e', 'es', 'e', 'ons', 'ez', 'ent'],
+  2: ['is', 'is', 'it', 'issons', 'issez', 'issent'],
+};
+const MUETTE = [true, true, true, false, false, true]; // terminaison qui ne se prononce pas
+
+function remplacerDernierE(base) {
+  const m = base.match(/^(.*)[eé]([^aeiouyéèêë]+)$/);
+  return m ? m[1] + 'è' + m[2] : base;
+}
+function conj1(v) {
+  const base = v.inf.slice(0, -2);
+  return TERM[1].map((t, p) => {
+    let r = base;
+    if (v.mod === 'cer' && p === 3) r = base.slice(0, -1) + 'ç';
+    if (v.mod === 'ger' && p === 3) r = base + 'e';
+    if (MUETTE[p]) {
+      if (v.mod === 'double') r = base + base.slice(-1);
+      if (v.mod === 'grave') r = remplacerDernierE(base);
+      if (v.mod === 'yer') r = base.slice(0, -1) + 'i';
+    }
+    return { radical: r, term: t };
+  });
+}
+function conjPresent(v) {
+  if (v.present) return v.present.map(f => {
+    if (!f.includes('|')) return { radical: f, term: '', entier: true };
+    const [r, t] = f.split('|');
+    return { radical: r, term: t };
+  });
+  if (v.g === 2) { const b = v.inf.slice(0, -2); return TERM[2].map(t => ({ radical: b, term: t })); }
+  return conj1(v);
+}
+function comme1erGroupe(v) { return v.g === 1 || v.fam === 'ouvrir'; }
+
+function conseilPresent(v, p, t) {
+  if (v.irr) return `« ${v.inf} » est un verbe irrégulier : il ne suit pas de règle, sa conjugaison s'apprend par cœur.`;
+  const g1 = comme1erGroupe(v);
+  switch (p) {
+    case 0:
+      if (g1) return 'Avec je, les verbes en -er prennent la terminaison -e : je chante, je joue.' + (v.g === 3 ? ' C\'est le cas de ce verbe, même s\'il finit par -ir.' : '');
+      if (v.g === 2) return 'Avec je, les verbes du 2e groupe prennent -is : je finis, je choisis.';
+      if (t === 'x') return 'Avec je, « pouvoir » et « vouloir » prennent un x : je peux, je veux.';
+      return 'Avec je, les verbes du 3e groupe prennent le plus souvent -s : je pars, je dis, je prends.';
+    case 1:
+      if (g1) return 'Avec tu, les verbes en -er prennent -es : tu chantes. Retiens : avec tu, le verbe finit presque toujours par -s.';
+      if (t === 'x') return 'Avec tu, « pouvoir » et « vouloir » prennent un x : tu peux, tu veux. Ce sont presque les seules exceptions : sinon, avec tu, le verbe finit toujours par -s.';
+      return `Avec tu, la terminaison est « -${t} ». Retiens : avec tu, le verbe finit presque toujours par -s.`;
+    case 2:
+      if (g1) return 'Avec il, elle, on, les verbes en -er prennent -e, sans t : il chante, elle joue.';
+      if (v.g === 2) return 'Avec il, elle, on, les verbes du 2e groupe prennent -it : il finit.';
+      if (t === '') return 'Ici, on n\'ajoute rien après le radical : il prend, il rend, il met. Pas de t !';
+      return 'Avec il, elle, on, les verbes du 3e groupe prennent le plus souvent -t : il part, il dit.';
+    case 3:
+      if (v.g === 2) return 'Avec nous, les verbes du 2e groupe prennent -issons : nous finissons.';
+      return 'Avec nous, la terminaison est -ons : nous chantons, nous partons.';
+    case 4:
+      if (v.g === 2) return 'Avec vous, les verbes du 2e groupe prennent -issez : vous finissez.';
+      return 'Avec vous, la terminaison est -ez : vous chantez, vous partez.';
+    case 5:
+      if (v.g === 2) return 'Avec ils et elles, les verbes du 2e groupe prennent -issent : ils finissent.';
+      return 'Avec ils et elles, la terminaison est -ent. On ne l\'entend pas, mais il faut l\'écrire !';
+  }
+}
+
+function groupeExplication(v, formes) {
+  if (v.g === 1) return `« ${v.inf} » se termine par -er : c'est un verbe du <b>1er groupe</b>.`;
+  if (v.g === 2) return `« ${v.inf} » se termine par -ir et on dit « nous ${forme(formes[3])} » : c'est un verbe du <b>2e groupe</b>.`;
+  if (v.inf === 'aller') return '« aller » se termine par -er, mais c\'est un verbe du <b>3e groupe</b> (c\'est le seul verbe en -er qui n\'est pas du 1er groupe).';
+  if (v.inf.endsWith('ir') && !v.inf.endsWith('oir')) return `« ${v.inf} » se termine par -ir, mais on dit « nous ${forme(formes[3])} » (et pas -issons) : c'est un verbe du <b>3e groupe</b>.`;
+  const fin = v.inf.endsWith('oir') ? 'oir' : 're';
+  return `« ${v.inf} » se termine par -${fin} : c'est un verbe du <b>3e groupe</b>.`;
+}
+
+function reglePresent(v, p) {
+  const formes = conjPresent(v);
+  let html = `<p>${groupeExplication(v, formes)}</p>`;
+  let terms;
+  if (v.g === 1 || v.g === 2) terms = TERM[v.g];
+  else if (!v.irr) terms = formes.map(f => f.term);
+  if (terms) {
+    html += `<p>Terminaisons de ${v.g === 3 ? 'ce verbe' : 'ce groupe'} au présent :</p><div class="terms-row">` +
+      terms.map((t, i) => `<span class="${i === p ? 'here' : ''}">${['je', 'tu', 'il', 'nous', 'vous', 'ils'][i]} -${t || '∅'}</span>`).join('') + '</div>';
+    if (v.g === 3 && v.fam !== 'ouvrir') html += '<p>Au 3e groupe, le plus souvent : -s, -s, -t, -ons, -ez, -ent.</p>';
+  } else {
+    html += '<p>Ce verbe est irrégulier : il ne suit aucun modèle.</p>';
+  }
+  const note = noteVerbe(v);
+  if (note) html += `<p>${note}</p>`;
+  return html;
+}
+function noteVerbe(v) { return v.note || NOTES_MOD[v.mod] || NOTES_FAM[v.fam] || ''; }
+
+const TEMPS = {
+  present: { nom: 'Présent', au: 'au présent', disponible: true, conjuguer: conjPresent, conseil: conseilPresent, regle: reglePresent },
+  imparfait: { nom: 'Imparfait', au: 'à l\'imparfait', disponible: false },
+  futur: { nom: 'Futur simple', au: 'au futur simple', disponible: false },
+  passeCompose: { nom: 'Passé composé', au: 'au passé composé', disponible: false },
+};
+
+// ---------- Outils ----------
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const forme = f => f.radical + f.term;
+const sansAccent = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const commenceVoyelle = s => /^[aeiouyéèêâîôûh]/i.test(s);
+function pronomPour(p, f) {
+  const pr = ['je', 'tu', 'il / elle / on', 'nous', 'vous', 'ils / elles'][p];
+  return p === 0 && commenceVoyelle(f) ? 'j\'' : pr + ' ';
+}
+function nettoyer(s) {
+  return s.normalize('NFC').toLowerCase().replace(/[’`´]/g, "'").replace(/\s+/g, ' ').trim();
+}
+function retirerSujet(s, item) {
+  const suj = nettoyer(item.sujet);
+  if (s.startsWith(suj + ' ')) return s.slice(suj.length + 1);
+  if (suj.endsWith("'") && s.startsWith(suj)) return s.slice(suj.length);
+  const m = s.match(/^(je |j'|j |tu |il |elle |on |nous |vous |ils |elles )/);
+  return m ? s.slice(m[0].length) : s;
+}
+function nomAccent(c) {
+  if ('é'.includes(c)) return 'accent aigu';
+  if ('èàù'.includes(c)) return 'accent grave';
+  if ('êâîôû'.includes(c)) return 'accent circonflexe';
+  if ('ëïü'.includes(c)) return 'tréma';
+  if (c === 'ç') return 'cédille';
+  return 'accent';
+}
+
+// ---------- Stockage (confort, facultatif) ----------
+const STORE = 'conjugo-v1';
+function lireStats() {
+  try { return Object.assign({ total: 0, bonnes: 0, record: 0, fautes: {}, reglages: null }, JSON.parse(localStorage.getItem(STORE) || '{}')); }
+  catch (e) { return { total: 0, bonnes: 0, record: 0, fautes: {}, reglages: null }; }
+}
+function ecrireStats() { try { localStorage.setItem(STORE, JSON.stringify(stats)); } catch (e) {} }
+let stats = lireStats();
+
+// ---------- Réglages ----------
+let reglages = Object.assign({ temps: ['present'], groupes: [1, 2, 3], noms: true, longueur: 10 }, stats.reglages || {});
+function construireReglages() {
+  $('opt-temps').innerHTML = Object.entries(TEMPS).map(([k, t]) =>
+    `<label class="opt ${t.disponible ? '' : 'off'}"><input type="checkbox" id="t-${k}" value="${k}" ${t.disponible ? '' : 'disabled'} ${reglages.temps.includes(k) && t.disponible ? 'checked' : ''}> ${t.nom}${t.disponible ? '' : ' <small>(bientôt)</small>'}</label>`).join('');
+  [1, 2, 3].forEach(g => $('g' + g).checked = reglages.groupes.includes(g));
+  $('opt-noms').checked = reglages.noms;
+  $('len10').checked = reglages.longueur === 10;
+  $('len20').checked = reglages.longueur === 20;
+}
+$('btn-reglages').onclick = () => {
+  const panel = $('reglages');
+  panel.hidden = !panel.hidden;
+  if (!panel.hidden) { construireReglages(); $('reglages-hint').textContent = ''; }
+};
+$('btn-appliquer').onclick = () => {
+  const temps = Object.keys(TEMPS).filter(k => TEMPS[k].disponible && $('t-' + k).checked);
+  const groupes = [1, 2, 3].filter(g => $('g' + g).checked);
+  if (!temps.length) { $('reglages-hint').textContent = 'Choisis au moins un temps.'; return; }
+  if (!groupes.length) { $('reglages-hint').textContent = 'Choisis au moins un groupe de verbes.'; return; }
+  reglages = { temps, groupes, noms: $('opt-noms').checked, longueur: $('len20').checked ? 20 : 10 };
+  stats.reglages = reglages; ecrireStats();
+  $('reglages').hidden = true;
+  nouvelleSerie();
+};
+
+// ---------- Tirage ----------
+let serie, item, dernierVerbe = null, repondu = false;
+
+function tirerItem() {
+  const candidats = VERBES.filter(v => reglages.groupes.includes(v.g) && v.inf !== dernierVerbe);
+  // Les verbes déjà ratés reviennent plus souvent
+  const poids = candidats.map(v => 1 + Math.min(4, stats.fautes[v.inf] || 0));
+  let r = Math.random() * poids.reduce((a, b) => a + b, 0), verbe = candidats[0];
+  for (let i = 0; i < candidats.length; i++) { r -= poids[i]; if (r <= 0) { verbe = candidats[i]; break; } }
+  const p = Math.floor(Math.random() * 6);
+  return creerItem(verbe, p, pick(reglages.temps));
+}
+function creerItem(verbe, p, temps) {
+  const f = forme(TEMPS[temps].conjuguer(verbe)[p]);
+  let sujet, nom = false;
+  if (reglages.noms && NOMS[p] && Math.random() < 0.4) { sujet = pick(NOMS[p]); nom = true; }
+  else if (p === 0 && commenceVoyelle(f)) sujet = 'j\'';
+  else sujet = pick(PRONOMS_TIRAGE[p]);
+  return { verbe, p, temps, sujet, nom };
+}
+
+function nouvelleSerie(items) {
+  serie = { longueur: items ? items.length : reglages.longueur, imposes: items || null, n: 0, resultats: [], erreurs: [], rappels: [], score: 0, streak: 0 };
+  $('fin').hidden = true; $('jeu').hidden = false;
+  questionSuivante();
+}
+
+function questionSuivante() {
+  if (serie.n >= serie.longueur) return finDeSerie();
+  repondu = false;
+  // Une question ratée revient 3 questions plus tard
+  serie.rappels.forEach(r => r.dans--);
+  const idx = serie.rappels.findIndex(r => r.dans <= 0);
+  if (serie.imposes) item = creerItem(serie.imposes[serie.n].verbe, serie.imposes[serie.n].p, serie.imposes[serie.n].temps);
+  else if (idx >= 0) { const r = serie.rappels.splice(idx, 1)[0]; item = creerItem(r.verbe, r.p, r.temps); }
+  else item = tirerItem();
+  dernierVerbe = item.verbe.inf;
+
+  $('temps-label').textContent = TEMPS[item.temps].au;
+  $('infinitif').textContent = item.verbe.inf;
+  $('groupe').textContent = ['', '1er groupe', '2e groupe', '3e groupe'][item.verbe.g];
+  $('sujet').textContent = item.sujet;
+  const inp = $('answer');
+  inp.value = ''; inp.disabled = false; $('btn-verifier').disabled = false;
+  $('hint').textContent = '';
+  $('feedback').hidden = true;
+  majStatut();
+  inp.focus();
+}
+
+function majStatut() {
+  let html = '';
+  for (let i = 0; i < serie.longueur; i++) {
+    const r = serie.resultats[i];
+    html += `<span class="dot ${r === true ? 'ok' : r === false ? 'ko' : i === serie.n ? 'now' : ''}"></span>`;
+  }
+  $('dots').innerHTML = html;
+  $('score').textContent = `${serie.score} / ${serie.n}`;
+  $('streak').textContent = serie.streak;
+}
+
+// ---------- Correction ----------
+function analyser(rep, item) {
+  const T = TEMPS[item.temps], v = item.verbe, p = item.p;
+  const formes = T.conjuguer(v), f = formes[p], bonne = forme(f);
+  if (rep === bonne) return { ok: true, bonne, formes };
+  if (v.alts && v.alts[p] && v.alts[p].includes(rep)) return { ok: true, bonne, formes, note: `On peut aussi l'écrire « ${bonne} ».` };
+
+  const d = [];
+  const sujetTxt = item.nom ? `« ${item.sujet} » (on peut le remplacer par « ${PERSONNES[p].remplace} »)` : `« ${item.sujet.replace("'", '')}${item.sujet.endsWith("'") ? 'e' : ''} »`;
+  const homo = HOMOPHONES[v.inf] && HOMOPHONES[v.inf][p];
+
+  if (homo && homo.faux.includes(rep)) {
+    d.push(homo.msg);
+  } else if (sansAccent(rep) === sansAccent(bonne)) {
+    d.push(...diagAccents(rep, bonne));
+    const note = noteVerbe(v);
+    if (note && (v.mod || v.fam === 'connaitre' || v.inf === 'recevoir')) d.push(note);
+  } else {
+    // Forme d'une autre personne ?
+    const autres = formes.map((x, i) => ({ i, f: forme(x) })).filter(x => x.i !== p && x.f === rep);
+    if (autres.length) {
+      const qui = autres.map(x => `« ${['je', 'tu', 'il', 'nous', 'vous', 'ils'][x.i]} »`).join(' ou ');
+      d.push(`« ${esc(rep)} », c'est la forme qui va avec ${qui}. Ici, le sujet est ${sujetTxt} : c'est la ${PERSONNES[p].label}.`);
+    }
+    if (rep === v.inf) {
+      d.push('Tu as écrit l\'infinitif, c\'est-à-dire le « nom » du verbe. Il faut le conjuguer : changer sa fin selon le sujet.');
+      d.push(T.conseil(v, p, f.term));
+    } else if (f.entier) {
+      d.push(T.conseil(v, p, f.term), noteVerbe(v));
+    } else {
+      const special = casParticuliers(v, p, rep, f, formes);
+      if (rep.startsWith(f.radical) && !special.radical) {
+        const e = rep.slice(f.radical.length);
+        d.push(`Le début du verbe (le radical « ${f.radical} ») est juste, mais la terminaison n'est pas bonne : tu as écrit ${e ? '« -' + esc(e) + ' »' : 'aucune terminaison'}, ${f.term ? 'il faut « -' + f.term + ' »' : 'alors qu\'il ne faut rien ajouter'}.`);
+        d.push(...(special.msgs.length ? special.msgs : [T.conseil(v, p, f.term)]));
+      } else if (f.term && rep.endsWith(f.term)) {
+        d.push(`La terminaison « -${f.term} » est juste, mais le début du verbe (le radical) n'est pas bon : il faut « ${f.radical} », tu as écrit « ${esc(rep.slice(0, rep.length - f.term.length))} ».`);
+        d.push(noteVerbe(v) || 'Pour ce verbe, le radical change selon la personne : regarde le tableau ci-dessous.');
+      } else {
+        d.push(`Il faut écrire « ${bonne} » : le radical est « ${f.radical} » et la terminaison ${f.term ? '« -' + f.term + ' »' : 'est vide (on n\'ajoute rien)'}.`);
+        d.push(...(special.msgs.length ? special.msgs : [T.conseil(v, p, f.term)]));
+        const note = noteVerbe(v); if (note) d.push(note);
+      }
+    }
+  }
+  return { ok: false, bonne, formes, diags: [...new Set(d.filter(Boolean))] };
+}
+
+function casParticuliers(v, p, rep, f, formes) {
+  const msgs = []; let radical = false;
+  if (p === 5 && f.term.endsWith('ent') && (rep === forme(formes[2]) || rep === f.radical + 'e' || rep === f.radical + 'es' || rep === f.radical + 's' || rep === f.radical))
+    msgs.push('Le -ent de « ils / elles » ne s\'entend pas à l\'oral : c\'est pour ça qu\'on l\'oublie souvent. Mais à l\'écrit, il est obligatoire !');
+  if (p === 2 && comme1erGroupe(v) && rep.endsWith('t'))
+    msgs.push('Avec les verbes en -er, il n\'y a jamais de t à la 3e personne : il chante, elle joue, on mange.');
+  if (p === 2 && f.term === '' && rep === f.radical + 't')
+    msgs.push('Pas de t ici ! Le verbe garde la lettre de son radical et on n\'ajoute rien : il prend, il rend, il met.');
+  if ((p === 0 || p === 1) && v.g === 2 && rep === f.radical + 'i')
+    msgs.push('N\'oublie pas le s final : je finis, tu finis. (« fini » sans s, c\'est le participe passé : j\'ai fini.)');
+  if (p === 1 && !/[sx]$/.test(rep))
+    msgs.push('Avec tu, le verbe se termine toujours par -s (ou par -x pour « tu peux », « tu veux »).');
+  if (p === 4 && comme1erGroupe(v) && /(er|é|ée|és)$/.test(rep))
+    msgs.push('« -er », « -é » et « -ez » se prononcent pareil, mais avec vous, au présent, on écrit toujours « -ez » : vous chantez.');
+  if (p === 3 && rep.endsWith('ont'))
+    msgs.push('« -ont » se prononce comme « -ons », mais avec nous on écrit toujours « -ons » : nous chantons.');
+  if (p === 3 && v.mod === 'ger' && rep === v.inf.slice(0, -2) + 'ons') { radical = true; msgs.push(NOTES_MOD.ger); }
+  return { msgs, radical };
+}
+
+function diagAccents(a, b) {
+  const out = [];
+  if (a.length !== b.length) return [`Attention aux accents : il faut écrire « ${b} ».`];
+  for (let i = 0; i < b.length; i++) {
+    const c = b[i], w = a[i];
+    if (c === w) continue;
+    if (c === 'ç') out.push('Il manque la cédille : il faut « ç » et pas « c ».');
+    else if (w === 'ç') out.push('Il n\'y a pas de cédille ici : on écrit « c ».');
+    else if (sansAccent(c) === c) out.push(`Il n'y a pas d'accent sur ce « ${c} » : tu as écrit « ${esc(w)} ».`);
+    else if (sansAccent(w) === w) out.push(`Il manque un accent : il faut « ${c} » (${nomAccent(c)}).`);
+    else out.push(`Ce n'est pas le bon accent : il faut « ${c} » (${nomAccent(c)}) et pas « ${esc(w)} » (${nomAccent(w)}).`);
+  }
+  return out;
+}
+
+function tableauHTML(formes, p) {
+  const ordre = [0, 3, 1, 4, 2, 5]; // deux colonnes : singulier | pluriel
+  return '<div class="tableau">' + ordre.map(i => {
+    const f = formes[i], txt = forme(f);
+    const corps = f.entier ? `<span class="rad">${txt}</span>` : `<span class="rad">${f.radical}</span>${f.term ? `<span class="term">${f.term}</span>` : ''}`;
+    return `<div class="${i === p ? 'here' : ''}"><span class="pr">${pronomPour(i, txt)}</span>${corps}</div>`;
+  }).join('') + '</div>';
+}
+function decompHTML(item, f) {
+  const suj = esc(item.sujet) + (item.sujet.endsWith("'") ? '' : ' ');
+  if (f.entier) return `<span class="decomp">${suj}<span class="rad">${forme(f)}</span></span>`;
+  return `<span class="decomp">${suj}<span class="rad">${f.radical}</span>${f.term ? `<span class="term">${f.term}</span>` : ''}</span>`;
+}
+
+$('form').addEventListener('submit', e => {
+  e.preventDefault();
+  if (repondu) return;
+  const brut = nettoyer($('answer').value);
+  if (!brut) { $('hint').textContent = 'Écris ta réponse avant de vérifier.'; return; }
+  const rep = retirerSujet(brut, item);
+  const res = analyser(rep, item);
+  repondu = true;
+  $('answer').disabled = true; $('btn-verifier').disabled = true;
+
+  stats.total++;
+  serie.resultats[serie.n] = res.ok;
+  if (res.ok) {
+    serie.score++; serie.streak++; stats.bonnes++;
+    stats.record = Math.max(stats.record, serie.streak);
+    if (stats.fautes[item.verbe.inf]) stats.fautes[item.verbe.inf]--;
+  } else {
+    serie.streak = 0;
+    stats.fautes[item.verbe.inf] = (stats.fautes[item.verbe.inf] || 0) + 1;
+    serie.erreurs.push({ item, rep, bonne: res.bonne });
+    if (!serie.imposes) serie.rappels.push({ verbe: item.verbe, p: item.p, temps: item.temps, dans: 3 });
+  }
+  serie.n++;
+  ecrireStats();
+  afficherRetour(res, rep);
+  majStatut();
+});
+
+function afficherRetour(res, rep) {
+  const T = TEMPS[item.temps], f = res.formes[item.p];
+  const fb = $('feedback');
+  const dernier = serie.n >= serie.longueur;
+  const btn = `<div class="next-row"><button class="btn" id="btn-suivant" type="button">${dernier ? 'Voir mon résultat' : 'Question suivante'} →</button></div>`;
+  if (res.ok) {
+    const bravo = pick(['Bravo !', 'Exact !', 'Parfait !', 'Bien joué !', 'C\'est ça !']);
+    fb.className = 'feedback ok';
+    fb.innerHTML = `<p class="verdict">${bravo}</p>
+      <div><span class="label">Ta réponse</span>${decompHTML(item, f)}</div>
+      <ul class="diag">${res.note ? `<li>${res.note}</li>` : ''}<li>${T.conseil(item.verbe, item.p, f.term)}</li></ul>${btn}`;
+  } else {
+    fb.className = 'feedback ko';
+    fb.innerHTML = `<p class="verdict">${pick(['Pas tout à fait…', 'Presque !', 'Oups, regarde bien'])}</p>
+      <div class="compare">
+        <div><span class="label">Tu as écrit</span><span class="barre">${esc(item.sujet)}${item.sujet.endsWith("'") ? '' : ' '}${esc(rep)}</span></div>
+        <div><span class="label">La bonne réponse</span>${decompHTML(item, f)}</div>
+      </div>
+      <div><span class="label">Ce qui ne va pas</span><ul class="diag">${res.diags.map(x => `<li>${x}</li>`).join('')}</ul></div>
+      <div class="regle"><h3>La règle à retenir</h3>${T.regle(item.verbe, item.p)}</div>
+      <div><span class="label">« ${item.verbe.inf} » ${T.au}</span>${tableauHTML(res.formes, item.p)}</div>${btn}`;
+  }
+  fb.hidden = false;
+  const b = $('btn-suivant');
+  b.onclick = questionSuivante;
+  b.focus({ preventScroll: true });
+  fb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ---------- Fin de série ----------
+function finDeSerie() {
+  const s = serie.score, n = serie.longueur;
+  const msg = s === n ? 'Parfait, aucune faute !' : s >= n * 0.8 ? 'Très bien !' : s >= n * 0.5 ? 'C\'est en bonne voie, continue.' : 'Ça va venir : on recommence avec les erreurs ?';
+  const fin = $('fin');
+  fin.innerHTML = `<h2>${msg}</h2>
+    <div class="score-big">${s}<small> / ${n}</small></div>
+    ${serie.erreurs.length ? `<div><span class="label">Tes erreurs</span><ul class="erreurs">${serie.erreurs.map(e =>
+      `<li><span class="barre" style="text-decoration:line-through">${esc(e.item.sujet)} ${esc(e.rep)}</span> → <b>${esc(e.item.sujet)}${e.item.sujet.endsWith("'") ? '' : ' '}${e.bonne}</b> <small>(${e.item.verbe.inf})</small></li>`).join('')}</ul></div>` : ''}
+    <p class="stats">Depuis le début : ${stats.bonnes} bonnes réponses sur ${stats.total} · record de ${stats.record} bonnes réponses d'affilée.</p>
+    <div class="panel-foot">
+      ${serie.erreurs.length ? '<button class="btn ghost" id="btn-erreurs" type="button">Refaire mes erreurs</button>' : ''}
+      <button class="btn" id="btn-nouvelle" type="button">Nouvelle série</button>
+    </div>`;
+  $('jeu').hidden = true; fin.hidden = false;
+  $('btn-nouvelle').onclick = () => nouvelleSerie();
+  if (serie.erreurs.length) {
+    const items = serie.erreurs.map(e => ({ verbe: e.item.verbe, p: e.item.p, temps: e.item.temps }));
+    $('btn-erreurs').onclick = () => nouvelleSerie(items);
+  }
+  $('btn-nouvelle').focus();
+}
+
+// ---------- Clavier d'accents ----------
+['é', 'è', 'ê', 'à', 'â', 'ç', 'î', 'ï', 'ô', 'û', 'ù'].forEach(c => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.textContent = c; b.setAttribute('aria-label', 'Ajouter ' + c);
+  b.onmousedown = e => e.preventDefault();
+  b.onclick = () => {
+    const inp = $('answer'); if (inp.disabled) return;
+    const s = inp.selectionStart ?? inp.value.length, e2 = inp.selectionEnd ?? inp.value.length;
+    inp.value = inp.value.slice(0, s) + c + inp.value.slice(e2);
+    inp.focus(); inp.setSelectionRange(s + 1, s + 1);
+  };
+  $('accents').appendChild(b);
+});
+
+nouvelleSerie();
+</script>
