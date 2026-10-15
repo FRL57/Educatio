@@ -208,6 +208,10 @@ legend { font-family: var(--font-display); font-weight: 600; font-size: 1.1rem; 
 
 /* Compte */
 .actions-tete { display: flex; gap: 10px; flex-wrap: wrap; }
+.porte-fermee .actions-tete { display: none; }
+.accueil { display: grid; gap: 4px; }
+.accueil h2 { margin: 0; }
+.accueil p { margin: 0; color: var(--ink-soft); }
 .btn.ghost.connecte { background: var(--accent-soft); border-color: var(--accent); }
 .onglets { display: flex; flex-wrap: wrap; gap: 6px; background: var(--bg); padding: 5px; border-radius: 16px; width: fit-content; max-width: 100%; }
 .onglets button { border: 0; background: transparent; padding: 8px 14px; border-radius: 12px; font-family: var(--font-display); font-weight: 600; color: var(--ink-soft); }
@@ -973,7 +977,7 @@ function creerItem(verbe, p, temps) {
 
 function nouvelleSerie(items) {
   serie = { longueur: items ? items.length : reglages.longueur, imposes: items || null, n: 0, resultats: [], erreurs: [], rappels: [], score: 0, streak: 0, tempsJoues: new Set() };
-  $('fin').hidden = true; $('jeu').hidden = false;
+  $('fin').hidden = true; $('jeu').hidden = document.body.classList.contains('porte-fermee');
   questionSuivante();
 }
 
@@ -1293,11 +1297,7 @@ function majBoutonCompte() {
 }
 
 async function chargerProfil() {
-  if (!session) {
-    profil = null; majBoutonCompte();
-    if (!$('compte').hidden && vueCompte === 'profil') ouvrirCompte('connexion');
-    return;
-  }
+  if (!session) { profil = null; majBoutonCompte(); return; }
   const { data, error } = await sb.from('profils').select('*').eq('id', session.user.id).maybeSingle();
   if (error) return;
   profil = data;
@@ -1305,7 +1305,20 @@ async function chargerProfil() {
   if (profil) for (const [k, n] of Object.entries(profil.fautes || {})) stats.fautes[k] = Math.max(stats.fautes[k] || 0, n);
   majBoutonCompte();
   envoyerEnAttente();
-  if (!$('compte').hidden && ['connexion', 'inscription', 'profil'].includes(vueCompte)) ouvrirCompte('profil');
+  if (!$('compte').hidden && vueCompte === 'profil') ouvrirCompte('profil');
+}
+
+// Sans compte connecté, l'appli s'ouvre sur la connexion : on ne joue qu'une fois connecté
+const VUES_ACCUEIL = ['connexion', 'inscription', 'oubli'];
+function afficherPorte(ouverte) {
+  document.body.classList.toggle('porte-fermee', !ouverte);
+  if (!ouverte) {
+    $('jeu').hidden = true; $('fin').hidden = true; $('reglages').hidden = true;
+    if ($('compte').hidden || !VUES_ACCUEIL.includes(vueCompte)) ouvrirCompte('connexion');
+    return;
+  }
+  if (vueCompte !== 'nouveau-mdp' && vueCompte !== 'profil') $('compte').hidden = true;
+  if ($('fin').hidden) { $('jeu').hidden = false; if ($('compte').hidden) $('answer').focus(); }
 }
 
 function ouvrirCompte(vue) {
@@ -1318,14 +1331,16 @@ function ouvrirCompte(vue) {
       <button type="button" class="${vue === 'inscription' ? 'actif' : ''}" data-vue="inscription">Créer un compte</button>
     </div>`;
   if (vue === 'profil') { afficherProfil(c); return; }
-  if (vue === 'connexion') c.innerHTML = `<h2>Mon compte</h2>${onglets}
+  const titre = session ? '<h2>Mon compte</h2>'
+    : '<div class="accueil"><h2>Bienvenue sur Educatio !</h2><p>Connecte-toi pour jouer, ou crée ton compte si c\'est ta première fois.</p></div>';
+  if (vue === 'connexion') c.innerHTML = `${titre}${onglets}
     <form class="formulaire" id="f-compte" novalidate>
       <label class="champ">E-mail ou pseudo<input id="c-email" type="text" autocomplete="username" autocapitalize="off" spellcheck="false"></label>
       <label class="champ">Mot de passe<input id="c-mdp" type="password" autocomplete="current-password"></label>
       <p class="hint" id="c-msg"></p>
       <div class="panel-foot"><button type="button" class="lien" data-vue="oubli">Mot de passe oublié ?</button><button class="btn" type="submit">Me connecter</button></div>
     </form>`;
-  if (vue === 'inscription') c.innerHTML = `<h2>Mon compte</h2>${onglets}
+  if (vue === 'inscription') c.innerHTML = `${titre}${onglets}
     <form class="formulaire" id="f-compte" novalidate>
       <label class="champ">Pseudo<input id="c-pseudo" type="text" autocomplete="username" maxlength="20" autocapitalize="off" spellcheck="false">
         <small>De 3 à 20 caractères : lettres sans accents, chiffres, - ou _. C'est le seul nom que les autres verront.</small></label>
@@ -1422,7 +1437,7 @@ async function afficherProfil(c) {
       <button class="btn ghost" type="button" id="btn-deconnexion">Me déconnecter</button>
       <button class="btn" type="button" id="btn-jouer">Jouer</button>
     </div>`;
-  $('btn-deconnexion').onclick = async () => { await sb.auth.signOut(); $('compte').hidden = true; };
+  $('btn-deconnexion').onclick = async () => { vueCompte = null; await sb.auth.signOut(); };
   $('btn-jouer').onclick = () => { $('compte').hidden = true; $('answer').focus(); };
   const { data } = await sb.from('series').select('temps, score, longueur, exceptions, joue_le').order('joue_le', { ascending: false }).limit(5);
   const h = $('historique'); if (!h) return;
@@ -1458,6 +1473,9 @@ async function envoyerEnAttente() {
 function initCompte() {
   majBoutonCompte();
   if (!sb) return;
+  // En attendant de savoir si un compte est déjà connecté, on ne montre pas le jeu
+  document.body.classList.add('porte-fermee');
+  $('jeu').hidden = true;
   $('btn-compte').onclick = () => {
     if (!$('compte').hidden) { $('compte').hidden = true; return; }
     ouvrirCompte(profil ? 'profil' : 'connexion');
@@ -1465,6 +1483,7 @@ function initCompte() {
   sb.auth.onAuthStateChange((evenement, s) => {
     session = s;
     if (evenement === 'PASSWORD_RECOVERY') ouvrirCompte('nouveau-mdp');
+    afficherPorte(!!s);
     // On sort du rappel avant de reparler au serveur (recommandation Supabase)
     setTimeout(chargerProfil, 0);
   });
