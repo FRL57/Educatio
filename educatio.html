@@ -242,6 +242,22 @@ legend { font-family: var(--font-display); font-weight: 600; font-size: 1.1rem; 
 .ami .historique li { background: var(--surface); }
 .lien.danger { color: var(--red); }
 
+/* Défis */
+.pill-defi { background: var(--sun-soft); border-color: var(--sun); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.counters { flex-wrap: wrap; min-width: 0; }
+.nouveau-defi { display: grid; gap: 10px; padding: 14px 16px; border-radius: 16px; background: var(--accent-soft); }
+.nouveau-defi p { margin: 0; }
+.defi { display: grid; gap: 8px; padding: 12px 14px; border-radius: 16px; background: var(--bg); border-left: 6px solid var(--sun); }
+.defi p { margin: 0; }
+.classement { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.classement li { display: flex; align-items: baseline; gap: 10px; padding: 6px 10px; border-radius: 10px; background: var(--surface); flex-wrap: wrap; }
+.classement li.moi { box-shadow: inset 0 0 0 2px var(--accent); }
+.classement .nom { font-weight: 600; flex: 1 1 auto; }
+.classement .rang { font-family: var(--font-display); font-weight: 700; color: var(--accent); min-width: 2.2em; }
+.classement li:first-child .rang { color: var(--sun-deep); }
+.gagnant { font-family: var(--font-display); font-weight: 700; color: var(--green); }
+.fin-defi { margin: 0; padding: 12px 14px; border-radius: 14px; background: var(--sun-soft); font-weight: 600; }
+
 /* Fin de série */
 .etoiles { display: flex; gap: 6px; }
 .etoiles svg { width: 54px; height: 54px; fill: var(--line); }
@@ -333,6 +349,7 @@ legend { font-family: var(--font-display); font-weight: 600; font-size: 1.1rem; 
     <div class="status">
       <div class="dots" id="dots" aria-label="Progression de la série"></div>
       <div class="counters">
+        <span class="pill pill-defi" id="pill-defi" hidden>Défi</span>
         <span class="pill score" title="Score de la série"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.5L12 17.2l-5.9 3.2 1.3-6.5L2.5 9.3l6.6-.8z"/></svg><span id="score">0</span></span>
         <span class="pill streak" id="streak-pill" title="Bonnes réponses d'affilée"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 3.5 5.5 6 5.5 11a5.5 5.5 0 0 1-11 0c0-2.4 1.2-4 2.5-5.2.2 1.7 1 2.9 2.2 3.4C10.6 8.7 11 5.3 12 2z"/></svg><span id="streak">0</span></span>
       </div>
@@ -1138,8 +1155,11 @@ function creerItem(verbe, p, temps) {
   return { verbe, p, temps, sujet, nom, genre };
 }
 
-function nouvelleSerie(items) {
-  serie = { longueur: items ? items.length : reglages.longueur, imposes: items || null, n: 0, resultats: [], erreurs: [], rappels: [], score: 0, streak: 0, tempsJoues: new Set() };
+function nouvelleSerie(items, defi = null) {
+  serie = { longueur: items ? items.length : reglages.longueur, imposes: items || null, n: 0, resultats: [], erreurs: [], rappels: [], score: 0, streak: 0, tempsJoues: new Set(),
+    defi, debut: Date.now() };
+  $('pill-defi').hidden = !defi;
+  if (defi) $('pill-defi').textContent = defi.adversaires.length ? `Défi contre ${defi.adversaires.join(', ')}` : 'Défi';
   $('fin').hidden = true; $('jeu').hidden = document.body.classList.contains('porte-fermee');
   questionSuivante();
 }
@@ -1150,7 +1170,10 @@ function questionSuivante() {
   // Une question ratée revient 3 questions plus tard
   serie.rappels.forEach(r => r.dans--);
   const idx = serie.rappels.findIndex(r => r.dans <= 0);
-  if (serie.imposes) item = creerItem(serie.imposes[serie.n].verbe, serie.imposes[serie.n].p, serie.imposes[serie.n].temps);
+  if (serie.imposes) {
+    const im = serie.imposes[serie.n];
+    item = im.sujet ? { ...im } : creerItem(im.verbe, im.p, im.temps); // un défi garde ses sujets
+  }
   else if (idx >= 0) { const r = serie.rappels.splice(idx, 1)[0]; item = creerItem(r.verbe, r.p, r.temps); }
   else item = tirerItem();
   dernierVerbe = item.verbe.inf;
@@ -1397,6 +1420,7 @@ function finDeSerie() {
       `<li><span class="barre" style="text-decoration:line-through">${esc(e.item.sujet)} ${esc(e.rep)}</span> → <b>${esc(e.item.sujet)}${e.item.sujet.endsWith("'") ? '' : ' '}${e.bonne}</b> <small>(${e.item.verbe.inf})</small></li>`).join('')}</ul></div>` : ''}
     ${modeHorsLigne ? '' : `<p class="stats">Depuis le début : ${stats.bonnes} bonnes réponses sur ${stats.total} · record de ${stats.record} bonnes réponses d'affilée.</p>`}
     <p class="stats" id="fin-compte"></p>
+    ${serie.defi ? '<p class="fin-defi" id="fin-defi">Enregistrement du défi…</p>' : ''}
     <div class="panel-foot">
       ${serie.erreurs.length ? '<button class="btn ghost" id="btn-erreurs" type="button">Refaire mes erreurs</button>' : ''}
       <button class="btn" id="btn-nouvelle" type="button">Nouvelle série</button>
@@ -1409,6 +1433,7 @@ function finDeSerie() {
   }
   $('btn-nouvelle').focus();
   if (nbEtoiles >= 2) confettis(160);
+  if (serie.defi) terminerDefi();
   enregistrerSerieEnLigne({
     p_temps: [...serie.tempsJoues], p_exceptions: !!reglages.exceptions && !serie.imposes, p_score: s, p_longueur: n,
     p_record: stats.record, p_erreurs: serie.erreurs.map(e => ({ v: e.item.verbe.inf, p: e.item.p, t: e.item.temps })), p_fautes: stats.fautes,
@@ -1433,6 +1458,12 @@ let session = null, profil = null, vueCompte = null;
 function messageErreur(e) {
   const m = (e && e.message) || String(e);
   if (/Invalid login credentials/i.test(m)) return 'E-mail, pseudo ou mot de passe incorrect.';
+  if (/(creer_defi|enregistrer_defi|mes_defis)/i.test(m)) return 'Les défis ne sont pas encore activés sur le serveur.';
+  if (/pas_ami/i.test(m)) return 'Tu ne peux défier que tes amis.';
+  if (/choix_amis/i.test(m)) return 'Choisis entre 1 et 10 amis à défier.';
+  if (/trop_defis/i.test(m)) return 'Tu as déjà lancé 20 défis aujourd\'hui : attends demain pour en lancer d\'autres.';
+  if (/deja_joue/i.test(m)) return 'Tu as déjà joué ce défi : ton premier score compte.';
+  if (/defi_termine/i.test(m)) return 'Ce défi est terminé : il durait 7 jours.';
   if (/trop_essais/i.test(m)) return 'Trop d\'essais ratés avec ce pseudo : attends 15 minutes, ou connecte-toi avec ton e-mail.';
   if (/email_pour_connexion|PGRST202/i.test(m)) return 'La connexion avec le pseudo n\'est pas encore activée : connecte-toi avec ton e-mail.';
   if (/Email not confirmed/i.test(m)) return 'Ton adresse e-mail n\'est pas encore confirmée : clique sur le lien reçu par e-mail.';
@@ -1461,7 +1492,7 @@ function majBoutonCompte() {
 }
 
 async function chargerProfil() {
-  if (!session) { profil = null; amis = null; majBoutonCompte(); majBoutonAmis(); return; }
+  if (!session) { profil = null; amis = null; defis = null; majBoutonCompte(); majBoutonAmis(); return; }
   const { data, error } = await sb.from('profils').select('*').eq('id', session.user.id).maybeSingle();
   if (error) return;
   profil = data;
@@ -1497,6 +1528,7 @@ function ouvrirCompte(vue) {
     </div>`;
   if (vue === 'profil') { afficherProfil(c); return; }
   if (vue === 'amis') { afficherAmis(c); return; }
+  if (vue === 'defis') { afficherDefis(c); return; }
   const titre = session ? '<h2>Mon compte</h2>'
     : '<div class="accueil"><h2>Bienvenue sur Educatio !</h2><p>Connecte-toi pour jouer, ou crée ton compte si c\'est ta première fois.</p></div>';
   if (vue === 'connexion') c.innerHTML = `${titre}${onglets}
@@ -1636,19 +1668,23 @@ async function rafraichirAmis() {
   if (!sb || !session) { amis = null; majBoutonAmis(); return; }
   const { data, error } = await appel(sb.rpc('mes_amis'));
   amis = error ? null : data;
+  await rafraichirDefis();
   majBoutonAmis();
 }
 function majBoutonAmis() {
   const b = $('btn-amis');
   b.hidden = !profil || amis === null;
-  const n = (amis || []).filter(a => a.etat === 'recue').length;
+  const demandes = (amis || []).filter(a => a.etat === 'recue').length, aRelever = aJouer(), n = demandes + aRelever;
   $('nb-demandes').hidden = !n;
   $('nb-demandes').textContent = n;
-  b.setAttribute('aria-label', n ? `Amis, ${n} demande${n > 1 ? 's' : ''} reçue${n > 1 ? 's' : ''}` : 'Amis');
+  const morceaux = [];
+  if (demandes) morceaux.push(`${demandes} demande${demandes > 1 ? 's' : ''} d'ami`);
+  if (aRelever) morceaux.push(`${aRelever} défi${aRelever > 1 ? 's' : ''} à relever`);
+  b.setAttribute('aria-label', morceaux.length ? `Amis : ${morceaux.join(', ')}` : 'Amis');
 }
 
 async function afficherAmis(c) {
-  c.innerHTML = `<h2>Mes amis</h2>
+  c.innerHTML = `<h2>Mes amis</h2>${ongletsAmis('amis')}
     <div class="mon-code">
       <div><span class="label">Ton code ami</span><b class="code grand" id="mon-code">${esc(profil ? profil.code_ami : '……')}</b></div>
       <button class="btn ghost" type="button" id="btn-copier-code">Copier</button>
@@ -1660,6 +1696,7 @@ async function afficherAmis(c) {
     </form>
     <p class="hint" id="c-msg"></p>
     <div id="liste-amis" class="liste-amis"><p>Chargement…</p></div>`;
+  c.querySelectorAll('.onglets [data-vue]').forEach(b => b.onclick = () => ouvrirCompte(b.dataset.vue));
   $('btn-copier-code').onclick = () => {
     const code = profil ? profil.code_ami : '';
     navigator.clipboard.writeText(code).then(() => msgCompte('Code copié !', true)).catch(() => {
@@ -1748,6 +1785,123 @@ function rendreAmis() {
   });
 }
 
+// ---------- Défis entre amis ----------
+let defis = null; // null : pas encore activés côté serveur
+
+const ongletsAmis = vue => `<div class="onglets">
+    <button type="button" class="${vue === 'amis' ? 'actif' : ''}" data-vue="amis">Mes amis</button>
+    <button type="button" class="${vue === 'defis' ? 'actif' : ''}" data-vue="defis">Défis${aJouer() ? ` <span class="pastille">${aJouer()}</span>` : ''}</button>
+  </div>`;
+const enCours = d => new Date(d.expire_le) > new Date();
+const aJouer = () => (defis || []).filter(d => d.mon_score === null && enCours(d)).length;
+function duree(sec) {
+  if (sec == null) return '';
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return m ? `${m} min ${String(s).padStart(2, '0')} s` : `${s} s`;
+}
+function resteJours(d) {
+  const j = Math.ceil((new Date(d.expire_le) - Date.now()) / 86400000);
+  return j <= 0 ? 'terminé' : j === 1 ? 'dernier jour' : `encore ${j} jours`;
+}
+
+async function rafraichirDefis() {
+  if (!sb || !session) { defis = null; return; }
+  const { data, error } = await appel(sb.rpc('mes_defis'));
+  defis = error ? null : data;
+}
+
+async function afficherDefis(c) {
+  const copains = (amis || []).filter(a => a.etat === 'ami');
+  const resumeReglages = `${reglages.longueur} questions · ${reglages.temps.map(t => TEMPS[t].nom).join(', ')} · ${reglages.exceptions ? 'verbes à exceptions' : 'tous les verbes'}`;
+  c.innerHTML = `<h2>Défis</h2>${ongletsAmis('defis')}
+    <section class="nouveau-defi">
+      <span class="label">Lancer un défi</span>
+      ${copains.length ? `
+        <p>Choisis qui tu défies. Vous aurez exactement les mêmes questions : le meilleur score gagne, et en cas d'égalité, le plus rapide.</p>
+        <div class="options" id="choix-amis">${copains.map(a => `<label class="opt"><input type="checkbox" value="${a.ami}"> ${esc(a.pseudo)}</label>`).join('')}</div>
+        <p class="stats">Série : ${resumeReglages}. <button type="button" class="lien" id="btn-defi-reglages">Changer dans les réglages</button></p>
+        <div class="panel-foot"><button class="btn" type="button" id="btn-creer-defi">Créer le défi et jouer</button></div>`
+      : '<p class="stats">Ajoute d\'abord un ami dans l\'onglet « Mes amis » pour pouvoir le défier.</p>'}
+    </section>
+    <p class="hint" id="c-msg"></p>
+    <div id="liste-defis" class="liste-amis"><p>Chargement…</p></div>`;
+  c.querySelectorAll('[data-vue]').forEach(b => b.onclick = () => ouvrirCompte(b.dataset.vue));
+  if ($('btn-defi-reglages')) $('btn-defi-reglages').onclick = () => { $('compte').hidden = true; $('btn-reglages').click(); };
+  if ($('btn-creer-defi')) $('btn-creer-defi').onclick = creerDefi;
+  await rafraichirDefis();
+  majBoutonAmis();
+  rendreDefis();
+}
+
+function rendreDefis() {
+  const zone = $('liste-defis'); if (!zone) return;
+  if (defis === null) { zone.innerHTML = '<p class="stats">Les défis ne sont pas encore activés sur le serveur.</p>'; return; }
+  const aRelever = defis.filter(d => d.mon_score === null && enCours(d));
+  const autres = defis.filter(d => !aRelever.includes(d));
+  const carte = d => {
+    const joueurs = d.joueurs || [], tousOntJoue = joueurs.every(j => j.a_joue), jai = d.mon_score !== null;
+    const meilleur = jai && joueurs[0] && joueurs[0].a_joue ? joueurs[0] : null;
+    const classement = joueurs.map((j, i) => {
+      let res = !j.a_joue ? (enCours(d) ? 'pas encore joué' : 'n\'a pas joué') : jai ? `<b>${j.score} / ${d.questions.length}</b> · ${duree(j.duree)}` : 'a joué';
+      const rang = jai && j.a_joue ? `<span class="rang">${i + 1}<sup>${i ? 'e' : 'er'}</sup></span>` : '';
+      return `<li class="${j.moi ? 'moi' : ''}">${rang}<span class="nom">${j.moi ? 'Toi' : esc(j.pseudo)}</span><span>${res}</span></li>`;
+    }).join('');
+    const titre = d.est_createur ? 'Ton défi' : `Défi de ${esc(d.createur)}`;
+    const fin = (tousOntJoue || !enCours(d)) && meilleur ? `<p class="gagnant">${meilleur.moi ? 'Tu as gagné ce défi !' : `${esc(meilleur.pseudo)} a gagné ce défi.`}</p>` : '';
+    return `<li class="defi">
+      <div class="ami-tete"><b>${titre}</b><span>${resteJours(d)}</span></div>
+      <p class="stats">${d.questions.length} questions · ${d.temps.map(t => TEMPS[t] ? TEMPS[t].nom : esc(t)).join(', ')}</p>
+      ${!jai && enCours(d) ? `<p class="stats">Les scores des autres s'affichent quand tu as joué.</p>` : ''}
+      <ul class="classement">${classement}</ul>${fin}
+      ${!jai && enCours(d) ? `<div class="panel-foot"><button class="btn ok" type="button" data-jouer="${d.defi}">Relever le défi</button></div>` : ''}
+    </li>`;
+  };
+  zone.innerHTML = (aRelever.length ? `<div><span class="label">À relever</span><ul class="amis">${aRelever.map(carte).join('')}</ul></div>` : '')
+    + `<div><span class="label">Mes défis</span><ul class="amis">${autres.length ? autres.map(carte).join('') : '<li class="ami vide">Pas encore de défi terminé.</li>'}</ul></div>`;
+  zone.querySelectorAll('[data-jouer]').forEach(b => b.onclick = () => jouerDefi(defis.find(d => String(d.defi) === b.dataset.jouer)));
+}
+
+async function creerDefi() {
+  const choisis = [...document.querySelectorAll('#choix-amis input:checked')].map(i => i.value);
+  if (!choisis.length) return msgCompte('Coche au moins un ami à défier.');
+  // On tire la série maintenant : tout le monde aura exactement les mêmes questions
+  const questions = [];
+  for (let i = 0; i < reglages.longueur; i++) {
+    const it = tirerItem();
+    questions.push({ v: it.verbe.inf, p: it.p, t: it.temps, s: it.sujet, g: it.genre, n: it.nom });
+  }
+  const temps = [...new Set(questions.map(q => q.t))];
+  msgCompte('Création du défi…', true);
+  const { data: id, error } = await appel(sb.rpc('creer_defi', { p_questions: questions, p_temps: temps, p_amis: choisis }));
+  if (error) return msgCompte(messageErreur(error));
+  await rafraichirDefis();
+  const d = (defis || []).find(x => x.defi === id);
+  if (d) jouerDefi(d); else msgCompte('Défi créé ! Retrouve-le dans la liste.', true);
+}
+
+function jouerDefi(d) {
+  if (!d) return;
+  const items = d.questions.map(q => {
+    const verbe = VERBES.find(v => v.inf === q.v);
+    return verbe && TEMPS[q.t] ? { verbe, p: q.p, temps: q.t, sujet: q.s, genre: q.g || '?', nom: !!q.n } : null;
+  }).filter(Boolean);
+  if (!items.length) return msgCompte('Ce défi ne peut pas être joué sur cette version de l\'appli.');
+  $('compte').hidden = true;
+  const adversaires = (d.joueurs || []).filter(j => !j.moi).map(j => j.pseudo);
+  nouvelleSerie(items, { id: d.defi, adversaires, longueur: d.questions.length });
+}
+
+async function terminerDefi() {
+  const zone = $('fin-defi'); if (!zone) return;
+  const sec = Math.round((Date.now() - serie.debut) / 1000);
+  // Si des questions n'existent plus dans cette version, on les compte comme ratées
+  const { error } = await appel(sb.rpc('enregistrer_defi', { p_defi: serie.defi.id, p_score: serie.score, p_duree: sec }));
+  zone.innerHTML = error ? messageErreur(error)
+    : `Défi terminé en ${duree(sec)} ! <button type="button" class="lien" id="btn-voir-defi">Voir le classement</button>`;
+  if ($('btn-voir-defi')) $('btn-voir-defi').onclick = () => ouvrirCompte('defis');
+  await rafraichirDefis(); majBoutonAmis();
+}
+
 // Enregistrement des séries ; sans réseau, elles attendent dans le téléphone
 async function appel(requete) { try { return await requete; } catch (e) { return { error: e }; } }
 function lireAttente() { try { return JSON.parse(localStorage.getItem(ATTENTE) || '[]'); } catch (e) { return []; } }
@@ -1788,8 +1942,8 @@ function quitterHorsLigne(versConnexion = true) {
 function initCompte() {
   $('btn-quitter-hl').onclick = () => quitterHorsLigne();
   $('btn-amis').onclick = () => {
-    if (!$('compte').hidden && vueCompte === 'amis') { $('compte').hidden = true; return; }
-    ouvrirCompte('amis');
+    if (!$('compte').hidden && ['amis', 'defis'].includes(vueCompte)) { $('compte').hidden = true; return; }
+    ouvrirCompte(aJouer() ? 'defis' : 'amis');
   };
   // Quand on revient sur l'appli, on regarde s'il y a de nouvelles demandes
   document.addEventListener('visibilitychange', () => { if (!document.hidden && session) rafraichirAmis(); });
@@ -1799,7 +1953,7 @@ function initCompte() {
   document.body.classList.add('porte-fermee');
   $('jeu').hidden = true;
   $('btn-compte').onclick = () => {
-    if (!$('compte').hidden && vueCompte !== 'amis') { $('compte').hidden = true; return; }
+    if (!$('compte').hidden && !['amis', 'defis'].includes(vueCompte)) { $('compte').hidden = true; return; }
     ouvrirCompte(profil ? 'profil' : 'connexion');
   };
   sb.auth.onAuthStateChange((evenement, s) => {
