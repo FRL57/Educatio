@@ -13,6 +13,15 @@ from PIL import Image, ImageDraw, ImageFont
 ICI = Path(__file__).parent
 SOURCE = (ICI / "educatio.html").read_text(encoding="utf-8")
 
+# Comptes en ligne : l'adresse du projet Supabase et sa clé publique (« anon »), si elles existent.
+# Cette clé est faite pour être visible dans une page web ; la sécurité vient des règles de la base.
+CONFIG = ICI / "supabase.json"
+if CONFIG.exists():
+    cfg = json.loads(CONFIG.read_text(encoding="utf-8"))
+    vide = "const SUPABASE_URL = '', SUPABASE_CLE = '';"
+    assert vide in SOURCE, "configuration Supabase introuvable dans educatio.html"
+    SOURCE = SOURCE.replace(vide, f"const SUPABASE_URL = {json.dumps(cfg['url'])}, SUPABASE_CLE = {json.dumps(cfg['cle'])};")
+
 TETE = """<!doctype html>
 <html lang="fr">
 <head>

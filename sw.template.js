@@ -16,8 +16,8 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET') return;
-  // Polices Google : depuis le cache d'abord
-  if (url.hostname.endsWith('fonts.googleapis.com') || url.hostname.endsWith('fonts.gstatic.com')) {
+  // Polices Google et bibliothèque Supabase : depuis le cache d'abord
+  if (url.hostname.endsWith('fonts.googleapis.com') || url.hostname.endsWith('fonts.gstatic.com') || url.hostname === 'cdn.jsdelivr.net') {
     e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(rep => {
       const copie = rep.clone();
       caches.open(CACHE).then(c => c.put(e.request, copie));

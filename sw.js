@@ -1,6 +1,6 @@
 // Service worker d'Educatio : l'appli marche aussi sans connexion.
 // Fichier généré par build.py à partir de sw.template.js : ne pas modifier sw.js à la main.
-const CACHE = 'educatio-438a277dc4';
+const CACHE = 'educatio-3b548b961e';
 const FICHIERS = ['./', 'index.html', 'manifest.webmanifest', 'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -16,8 +16,8 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET') return;
-  // Polices Google : depuis le cache d'abord
-  if (url.hostname.endsWith('fonts.googleapis.com') || url.hostname.endsWith('fonts.gstatic.com')) {
+  // Polices Google et bibliothèque Supabase : depuis le cache d'abord
+  if (url.hostname.endsWith('fonts.googleapis.com') || url.hostname.endsWith('fonts.gstatic.com') || url.hostname === 'cdn.jsdelivr.net') {
     e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(rep => {
       const copie = rep.clone();
       caches.open(CACHE).then(c => c.put(e.request, copie));

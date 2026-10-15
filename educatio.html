@@ -183,6 +183,30 @@ legend { font-family: var(--font-display); font-weight: 600; font-size: 1.1rem; 
 .opt small { color: var(--ink-soft); }
 .panel-foot { display: flex; justify-content: flex-end; gap: 12px; flex-wrap: wrap; }
 
+/* Compte */
+.actions-tete { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn.ghost.connecte { background: var(--accent-soft); border-color: var(--accent); }
+.onglets { display: flex; flex-wrap: wrap; gap: 6px; background: var(--bg); padding: 5px; border-radius: 16px; width: fit-content; max-width: 100%; }
+.onglets button { border: 0; background: transparent; padding: 8px 14px; border-radius: 12px; font-family: var(--font-display); font-weight: 600; color: var(--ink-soft); }
+.onglets button.actif { background: var(--surface); color: var(--accent); box-shadow: 0 2px 0 var(--line); }
+.formulaire { display: grid; gap: 14px; max-width: 480px; }
+.formulaire p { margin: 0; }
+.champ { display: grid; gap: 6px; font-family: var(--font-display); font-weight: 600; }
+.champ input { font: inherit; font-family: var(--font-body); font-weight: 400; font-size: 1rem; width: 100%; min-width: 0; padding: 10px 14px; border-radius: 14px; border: 3px solid var(--line); background: var(--bg); color: var(--ink); }
+.champ input:focus { border-color: var(--accent); outline: none; }
+.champ small { font-family: var(--font-body); font-weight: 400; font-size: .85rem; color: var(--ink-soft); }
+.case { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+.case input { flex: none; width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); }
+.hint.msg-ok { color: var(--green); }
+.lien { background: none; border: 0; padding: 4px 0; color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.chiffres { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.chiffres div { display: grid; gap: 2px; padding: 12px 8px; border-radius: 16px; background: var(--bg); text-align: center; }
+.chiffres b { font-family: var(--font-display); font-size: 1.8rem; line-height: 1.1; color: var(--accent); font-variant-numeric: tabular-nums; }
+.chiffres span { font-size: .85rem; color: var(--ink-soft); }
+.historique { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.historique li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; padding: 8px 12px; border-radius: 12px; background: var(--bg); }
+.code { font-family: var(--font-display); letter-spacing: .15em; color: var(--ink); background: var(--sun-soft); padding: 2px 8px; border-radius: 8px; }
+
 /* Fin de série */
 .etoiles { display: flex; gap: 6px; }
 .etoiles svg { width: 54px; height: 54px; fill: var(--line); }
@@ -223,8 +247,13 @@ legend { font-family: var(--font-display); font-weight: 600; font-size: 1.1rem; 
       <h1 aria-label="Educatio"><span class="p0">E</span><span class="p1">d</span><span class="p2">u</span><span class="p3">c</span><span class="p4">a</span><span class="p5">t</span><span class="p0">i</span><span class="p1">o</span></h1>
       <p>Entraînement à la conjugaison · 6e</p>
     </div>
-    <button class="btn ghost" id="btn-reglages" type="button">Réglages</button>
+    <div class="actions-tete">
+      <button class="btn ghost" id="btn-compte" type="button" hidden>Mon compte</button>
+      <button class="btn ghost" id="btn-reglages" type="button">Réglages</button>
+    </div>
   </header>
+
+  <section class="panel" id="compte" hidden aria-live="polite"></section>
 
   <section class="panel" id="reglages" hidden>
     <h2>Réglages</h2>
@@ -293,6 +322,7 @@ legend { font-family: var(--font-display); font-weight: 600; font-size: 1.1rem; 
   <section class="panel fin" id="fin" hidden></section>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
 /* =====================================================================
    EDUCATIO — architecture
@@ -872,6 +902,7 @@ function construireReglages() {
 $('btn-reglages').onclick = () => {
   const panel = $('reglages');
   panel.hidden = !panel.hidden;
+  $('compte').hidden = true;
   if (!panel.hidden) { construireReglages(); $('reglages-hint').textContent = ''; }
 };
 $('btn-appliquer').onclick = () => {
@@ -916,7 +947,7 @@ function creerItem(verbe, p, temps) {
 }
 
 function nouvelleSerie(items) {
-  serie = { longueur: items ? items.length : reglages.longueur, imposes: items || null, n: 0, resultats: [], erreurs: [], rappels: [], score: 0, streak: 0 };
+  serie = { longueur: items ? items.length : reglages.longueur, imposes: items || null, n: 0, resultats: [], erreurs: [], rappels: [], score: 0, streak: 0, tempsJoues: new Set() };
   $('fin').hidden = true; $('jeu').hidden = false;
   questionSuivante();
 }
@@ -931,6 +962,7 @@ function questionSuivante() {
   else if (idx >= 0) { const r = serie.rappels.splice(idx, 1)[0]; item = creerItem(r.verbe, r.p, r.temps); }
   else item = tirerItem();
   dernierVerbe = item.verbe.inf;
+  serie.tempsJoues.add(item.temps);
 
   $('temps-label').textContent = TEMPS[item.temps].au;
   $('infinitif').textContent = item.verbe.inf;
@@ -1172,6 +1204,7 @@ function finDeSerie() {
     ${serie.erreurs.length ? `<div><span class="label">Tes erreurs</span><ul class="erreurs">${serie.erreurs.map(e =>
       `<li><span class="barre" style="text-decoration:line-through">${esc(e.item.sujet)} ${esc(e.rep)}</span> → <b>${esc(e.item.sujet)}${e.item.sujet.endsWith("'") ? '' : ' '}${e.bonne}</b> <small>(${e.item.verbe.inf})</small></li>`).join('')}</ul></div>` : ''}
     <p class="stats">Depuis le début : ${stats.bonnes} bonnes réponses sur ${stats.total} · record de ${stats.record} bonnes réponses d'affilée.</p>
+    <p class="stats" id="fin-compte"></p>
     <div class="panel-foot">
       ${serie.erreurs.length ? '<button class="btn ghost" id="btn-erreurs" type="button">Refaire mes erreurs</button>' : ''}
       <button class="btn" id="btn-nouvelle" type="button">Nouvelle série</button>
@@ -1184,6 +1217,222 @@ function finDeSerie() {
   }
   $('btn-nouvelle').focus();
   if (nbEtoiles >= 2) confettis(160);
+  enregistrerSerieEnLigne({
+    p_temps: [...serie.tempsJoues], p_exceptions: !!reglages.exceptions && !serie.imposes, p_score: s, p_longueur: n,
+    p_record: stats.record, p_erreurs: serie.erreurs.map(e => ({ v: e.item.verbe.inf, p: e.item.p, t: e.item.temps })), p_fautes: stats.fautes,
+  }).then(etat => {
+    const zone = $('fin-compte'); if (!zone) return;
+    if (etat === 'ok') zone.textContent = 'Résultat enregistré dans ton compte.';
+    else if (etat === 'attente') zone.textContent = 'Pas de connexion : le résultat sera enregistré dans ton compte dès que possible.';
+    else if (sb) { zone.innerHTML = '<button type="button" class="lien" id="btn-fin-compte">Crée un compte</button> pour garder tes résultats et suivre tes progrès.'; $('btn-fin-compte').onclick = () => ouvrirCompte('inscription'); }
+  });
+}
+
+// ---------- Compte en ligne (Supabase) ----------
+// Sans serveur configuré (adresse vide), l'appli marche seule, sans compte.
+// build.py remplit ces deux valeurs à partir de supabase.json pour la version en ligne.
+const SUPABASE_URL = '', SUPABASE_CLE = '';
+const sb = SUPABASE_URL && window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_CLE) : null;
+const ATTENTE = 'educatio-attente';
+const PSEUDO_OK = /^[A-Za-z0-9_-]{3,20}$/;
+let session = null, profil = null, vueCompte = null;
+
+function messageErreur(e) {
+  const m = (e && e.message) || String(e);
+  if (/Invalid login credentials/i.test(m)) return 'E-mail ou mot de passe incorrect.';
+  if (/Email not confirmed/i.test(m)) return 'Ton adresse e-mail n\'est pas encore confirmée : clique sur le lien reçu par e-mail.';
+  if (/already registered/i.test(m)) return 'Un compte existe déjà avec cet e-mail. Connecte-toi plutôt.';
+  if (/Password should be/i.test(m)) return 'Le mot de passe doit faire au moins 8 caractères.';
+  if (/Database error saving new user/i.test(m)) return 'Ce pseudo vient d\'être pris : choisis-en un autre.';
+  if (/rate limit|too many/i.test(m)) return 'Trop d\'essais d\'un coup : attends quelques minutes et réessaie.';
+  if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'Pas de connexion internet : réessaie quand tu seras connecté.';
+  if (/valid email|invalid format/i.test(m)) return 'Cette adresse e-mail n\'est pas valide.';
+  if (/same.*password|different from the old/i.test(m)) return 'Choisis un mot de passe différent de l\'ancien.';
+  return 'Ça n\'a pas marché : ' + m;
+}
+const valeur = id => $(id).value.trim();
+const lienRetour = () => location.origin + location.pathname;
+function msgCompte(texte, ok = false) {
+  const m = $('c-msg'); if (!m) return;
+  m.textContent = texte; m.className = 'hint' + (ok ? ' msg-ok' : '');
+}
+
+function majBoutonCompte() {
+  const b = $('btn-compte');
+  if (!sb) { b.hidden = true; return; }
+  b.hidden = false;
+  b.textContent = profil ? profil.pseudo : 'Mon compte';
+  b.classList.toggle('connecte', !!profil);
+}
+
+async function chargerProfil() {
+  if (!session) {
+    profil = null; majBoutonCompte();
+    if (!$('compte').hidden && vueCompte === 'profil') ouvrirCompte('connexion');
+    return;
+  }
+  const { data, error } = await sb.from('profils').select('*').eq('id', session.user.id).maybeSingle();
+  if (error) return;
+  profil = data;
+  // Les verbes ratés sur un autre appareil reviennent aussi plus souvent ici
+  if (profil) for (const [k, n] of Object.entries(profil.fautes || {})) stats.fautes[k] = Math.max(stats.fautes[k] || 0, n);
+  majBoutonCompte();
+  envoyerEnAttente();
+  if (!$('compte').hidden && ['connexion', 'inscription', 'profil'].includes(vueCompte)) ouvrirCompte('profil');
+}
+
+function ouvrirCompte(vue) {
+  vueCompte = vue;
+  $('reglages').hidden = true;
+  const c = $('compte');
+  c.hidden = false;
+  const onglets = `<div class="onglets">
+      <button type="button" class="${vue === 'connexion' ? 'actif' : ''}" data-vue="connexion">Me connecter</button>
+      <button type="button" class="${vue === 'inscription' ? 'actif' : ''}" data-vue="inscription">Créer un compte</button>
+    </div>`;
+  if (vue === 'profil') { afficherProfil(c); return; }
+  if (vue === 'connexion') c.innerHTML = `<h2>Mon compte</h2>${onglets}
+    <form class="formulaire" id="f-compte" novalidate>
+      <label class="champ">E-mail<input id="c-email" type="email" autocomplete="email" inputmode="email" autocapitalize="off"></label>
+      <label class="champ">Mot de passe<input id="c-mdp" type="password" autocomplete="current-password"></label>
+      <p class="hint" id="c-msg"></p>
+      <div class="panel-foot"><button type="button" class="lien" data-vue="oubli">Mot de passe oublié ?</button><button class="btn" type="submit">Me connecter</button></div>
+    </form>`;
+  if (vue === 'inscription') c.innerHTML = `<h2>Mon compte</h2>${onglets}
+    <form class="formulaire" id="f-compte" novalidate>
+      <label class="champ">Pseudo<input id="c-pseudo" type="text" autocomplete="username" maxlength="20" autocapitalize="off" spellcheck="false">
+        <small>De 3 à 20 caractères : lettres sans accents, chiffres, - ou _. C'est le seul nom que les autres verront.</small></label>
+      <label class="champ">E-mail<input id="c-email" type="email" autocomplete="email" inputmode="email" autocapitalize="off">
+        <small>Il sert seulement à te connecter et à retrouver ton mot de passe. Personne d'autre ne le voit.</small></label>
+      <label class="champ">Mot de passe<input id="c-mdp" type="password" autocomplete="new-password"><small>Au moins 8 caractères.</small></label>
+      <label class="champ">Mot de passe, encore une fois<input id="c-mdp2" type="password" autocomplete="new-password"></label>
+      <label class="case"><input id="c-parent" type="checkbox"> <span>Un de mes parents est d'accord pour que je crée ce compte.</span></label>
+      <p class="hint" id="c-msg"></p>
+      <div class="panel-foot"><button class="btn" type="submit">Créer mon compte</button></div>
+    </form>`;
+  if (vue === 'oubli') c.innerHTML = `<h2>Mot de passe oublié</h2>
+    <form class="formulaire" id="f-compte" novalidate>
+      <p>Écris l'adresse e-mail de ton compte : tu vas recevoir un lien pour choisir un nouveau mot de passe.</p>
+      <label class="champ">E-mail<input id="c-email" type="email" autocomplete="email" inputmode="email" autocapitalize="off"></label>
+      <p class="hint" id="c-msg"></p>
+      <div class="panel-foot"><button type="button" class="lien" data-vue="connexion">Retour</button><button class="btn" type="submit">Envoyer le lien</button></div>
+    </form>`;
+  if (vue === 'nouveau-mdp') c.innerHTML = `<h2>Nouveau mot de passe</h2>
+    <form class="formulaire" id="f-compte" novalidate>
+      <label class="champ">Nouveau mot de passe<input id="c-mdp" type="password" autocomplete="new-password"><small>Au moins 8 caractères.</small></label>
+      <label class="champ">Encore une fois<input id="c-mdp2" type="password" autocomplete="new-password"></label>
+      <p class="hint" id="c-msg"></p>
+      <div class="panel-foot"><button class="btn" type="submit">Enregistrer</button></div>
+    </form>`;
+  c.querySelectorAll('[data-vue]').forEach(b => b.onclick = () => ouvrirCompte(b.dataset.vue));
+  $('f-compte').onsubmit = e => { e.preventDefault(); ACTIONS_COMPTE[vue](); };
+  const premier = c.querySelector('input'); if (premier) premier.focus();
+}
+
+const ACTIONS_COMPTE = {
+  async connexion() {
+    const email = valeur('c-email').toLowerCase(), password = $('c-mdp').value;
+    if (!email || !password) return msgCompte('Écris ton e-mail et ton mot de passe.');
+    msgCompte('Connexion…', true);
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) msgCompte(messageErreur(error));
+    // Si c'est bon, le changement de session charge le profil et affiche le compte.
+  },
+  async inscription() {
+    const pseudo = valeur('c-pseudo'), email = valeur('c-email').toLowerCase(), password = $('c-mdp').value;
+    if (!PSEUDO_OK.test(pseudo)) return msgCompte('Le pseudo doit faire de 3 à 20 caractères : lettres sans accents, chiffres, - ou _.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return msgCompte('Cette adresse e-mail n\'est pas valide.');
+    if (password.length < 8) return msgCompte('Le mot de passe doit faire au moins 8 caractères.');
+    if (password !== $('c-mdp2').value) return msgCompte('Les deux mots de passe ne sont pas pareils.');
+    if (!$('c-parent').checked) return msgCompte('Demande d\'abord à un de tes parents s\'il est d\'accord, puis coche la case.');
+    msgCompte('Création du compte…', true);
+    const { data: libre, error: e1 } = await sb.rpc('pseudo_disponible', { p: pseudo });
+    if (e1) return msgCompte(messageErreur(e1));
+    if (!libre) return msgCompte('Ce pseudo est déjà pris : choisis-en un autre.');
+    const { data, error } = await sb.auth.signUp({ email, password, options: { data: { pseudo }, emailRedirectTo: lienRetour() } });
+    if (error) return msgCompte(messageErreur(error));
+    if (!data.session) msgCompte(`Presque fini ! Un e-mail a été envoyé à ${email}. Clique sur le lien qu'il contient pour activer ton compte, puis connecte-toi.`, true);
+  },
+  async oubli() {
+    const email = valeur('c-email').toLowerCase();
+    if (!email) return msgCompte('Écris l\'adresse e-mail de ton compte.');
+    msgCompte('Envoi…', true);
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: lienRetour() });
+    if (error) return msgCompte(messageErreur(error));
+    msgCompte('Si un compte existe avec cette adresse, un e-mail vient d\'être envoyé. Ouvre le lien qu\'il contient pour choisir un nouveau mot de passe.', true);
+  },
+  async 'nouveau-mdp'() {
+    const password = $('c-mdp').value;
+    if (password.length < 8) return msgCompte('Le mot de passe doit faire au moins 8 caractères.');
+    if (password !== $('c-mdp2').value) return msgCompte('Les deux mots de passe ne sont pas pareils.');
+    const { error } = await sb.auth.updateUser({ password });
+    if (error) return msgCompte(messageErreur(error));
+    msgCompte('Mot de passe changé !', true);
+    setTimeout(() => ouvrirCompte('profil'), 1200);
+  },
+};
+
+async function afficherProfil(c) {
+  if (!profil) { c.innerHTML = '<h2>Mon compte</h2><p>Chargement…</p>'; return; }
+  const pct = profil.reponses ? Math.round(100 * profil.bonnes / profil.reponses) : 0;
+  c.innerHTML = `<h2>Salut ${esc(profil.pseudo)} !</h2>
+    <div class="chiffres">
+      <div><b>${profil.series_jouees}</b><span>séries jouées</span></div>
+      <div><b>${pct} %</b><span>de bonnes réponses</span></div>
+      <div><b>${profil.record}</b><span>record d'affilée</span></div>
+    </div>
+    <div><span class="label">Mes dernières séries</span><ul class="historique" id="historique"><li>Chargement…</li></ul></div>
+    <p class="stats">Ton code ami : <b class="code">${esc(profil.code_ami)}</b>. Bientôt, tu pourras le donner à tes copains pour suivre vos progrès et vous lancer des défis.</p>
+    <div class="panel-foot">
+      <button class="btn ghost" type="button" id="btn-deconnexion">Me déconnecter</button>
+      <button class="btn" type="button" id="btn-jouer">Jouer</button>
+    </div>`;
+  $('btn-deconnexion').onclick = async () => { await sb.auth.signOut(); $('compte').hidden = true; };
+  $('btn-jouer').onclick = () => { $('compte').hidden = true; $('answer').focus(); };
+  const { data } = await sb.from('series').select('temps, score, longueur, exceptions, joue_le').order('joue_le', { ascending: false }).limit(5);
+  const h = $('historique'); if (!h) return;
+  h.innerHTML = data && data.length
+    ? data.map(s => `<li><span>${new Date(s.joue_le).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
+        <span>${s.temps.map(t => TEMPS[t] ? TEMPS[t].nom : esc(t)).join(', ')}${s.exceptions ? ' · exceptions' : ''}</span><b>${s.score} / ${s.longueur}</b></li>`).join('')
+    : '<li>Pas encore de série terminée. À toi de jouer !</li>';
+}
+
+// Enregistrement des séries ; sans réseau, elles attendent dans le téléphone
+async function appel(requete) { try { return await requete; } catch (e) { return { error: e }; } }
+function lireAttente() { try { return JSON.parse(localStorage.getItem(ATTENTE) || '[]'); } catch (e) { return []; } }
+function ecrireAttente(l) { try { localStorage.setItem(ATTENTE, JSON.stringify(l)); } catch (e) {} }
+async function enregistrerSerieEnLigne(donnees) {
+  if (!sb || !session) return 'local';
+  const { error } = await appel(sb.rpc('enregistrer_serie', donnees));
+  if (error) { ecrireAttente([...lireAttente(), { uid: session.user.id, donnees }]); return 'attente'; }
+  const { data } = await sb.from('profils').select('*').eq('id', session.user.id).maybeSingle();
+  if (data) profil = data;
+  return 'ok';
+}
+async function envoyerEnAttente() {
+  if (!session) return;
+  const reste = [];
+  for (const a of lireAttente()) {
+    if (a.uid !== session.user.id) { reste.push(a); continue; }
+    const { error } = await appel(sb.rpc('enregistrer_serie', a.donnees));
+    if (error) reste.push(a);
+  }
+  ecrireAttente(reste);
+}
+
+function initCompte() {
+  majBoutonCompte();
+  if (!sb) return;
+  $('btn-compte').onclick = () => {
+    if (!$('compte').hidden) { $('compte').hidden = true; return; }
+    ouvrirCompte(profil ? 'profil' : 'connexion');
+  };
+  sb.auth.onAuthStateChange((evenement, s) => {
+    session = s;
+    if (evenement === 'PASSWORD_RECOVERY') ouvrirCompte('nouveau-mdp');
+    // On sort du rappel avant de reparler au serveur (recommandation Supabase)
+    setTimeout(chargerProfil, 0);
+  });
 }
 
 // ---------- Clavier d'accents ----------
@@ -1200,5 +1449,6 @@ function finDeSerie() {
   $('accents').appendChild(b);
 });
 
+initCompte();
 nouvelleSerie();
 </script>
