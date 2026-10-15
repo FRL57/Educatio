@@ -242,6 +242,18 @@ legend { font-family: var(--font-display); font-weight: 600; font-size: 1.1rem; 
 .ami .historique li { background: var(--surface); }
 .lien.danger { color: var(--red); }
 
+/* Suppression du compte, confidentialité */
+.pied-compte { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 18px; padding-top: 14px; border-top: 2px dashed var(--line); }
+.confirmer { display: grid; gap: 10px; padding: 14px 16px; border-radius: 16px; background: var(--bg); border: 3px solid var(--red); }
+.confirmer p { margin: 0; }
+.confirmer .panel-foot { justify-content: flex-start; }
+.prive { display: grid; gap: 14px; max-width: 640px; }
+.prive section { display: grid; gap: 6px; padding: 12px 16px; border-radius: 16px; background: var(--bg); }
+.prive h3 { margin: 0; font-family: var(--font-display); font-size: 1.15rem; }
+.prive p, .prive ul { margin: 0; }
+.prive ul { padding-left: 1.2em; display: grid; gap: 4px; }
+.prive .a-remplir { color: var(--ink-soft); font-style: italic; }
+
 /* Défis */
 .pill-defi { background: var(--sun-soft); border-color: var(--sun); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .counters { flex-wrap: wrap; min-width: 0; }
@@ -1453,11 +1465,14 @@ const SUPABASE_URL = '', SUPABASE_CLE = '';
 const sb = SUPABASE_URL && window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_CLE) : null;
 const ATTENTE = 'educatio-attente';
 const PSEUDO_OK = /^[A-Za-z0-9_-]{3,20}$/;
-let session = null, profil = null, vueCompte = null;
+// Adresse e-mail à écrire pour toute question sur les données (affichée dans la page Confidentialité)
+const CONTACT = '';
+let session = null, profil = null, vueCompte = null, annonceAccueil = '';
 
 function messageErreur(e) {
   const m = (e && e.message) || String(e);
   if (/Invalid login credentials/i.test(m)) return 'E-mail, pseudo ou mot de passe incorrect.';
+  if (/supprimer_mon_compte/i.test(m)) return 'La suppression du compte n\'est pas encore activée sur le serveur. Demande à tes parents.';
   if (/(creer_defi|enregistrer_defi|mes_defis)/i.test(m)) return 'Les défis ne sont pas encore activés sur le serveur.';
   if (/pas_ami/i.test(m)) return 'Tu ne peux défier que tes amis.';
   if (/choix_amis/i.test(m)) return 'Choisis entre 1 et 10 amis à défier.';
@@ -1529,8 +1544,10 @@ function ouvrirCompte(vue) {
   if (vue === 'profil') { afficherProfil(c); return; }
   if (vue === 'amis') { afficherAmis(c); return; }
   if (vue === 'defis') { afficherDefis(c); return; }
+  if (vue === 'confidentialite') { afficherConfidentialite(c); return; }
   const titre = session ? '<h2>Mon compte</h2>'
-    : '<div class="accueil"><h2>Bienvenue sur Educatio !</h2><p>Connecte-toi pour jouer, ou crée ton compte si c\'est ta première fois.</p></div>';
+    : `<div class="accueil"><h2>Bienvenue sur Educatio !</h2>${annonceAccueil ? `<p class="hint msg-ok">${esc(annonceAccueil)}</p>` : ''}<p>Connecte-toi pour jouer, ou crée ton compte si c'est ta première fois.</p></div>`;
+  annonceAccueil = '';
   if (vue === 'connexion') c.innerHTML = `${titre}${onglets}
     <form class="formulaire" id="f-compte" novalidate>
       <label class="champ">E-mail ou pseudo<input id="c-email" type="text" autocomplete="username" autocapitalize="off" spellcheck="false"></label>
@@ -1567,7 +1584,8 @@ function ouvrirCompte(vue) {
   if (!session && VUES_ACCUEIL.includes(vue)) {
     c.insertAdjacentHTML('beforeend', `<div class="choix-hl">
       <button type="button" class="lien" id="btn-hors-ligne">Jouer hors ligne</button>
-      <small>Pour s'entraîner sans compte : rien ne sera enregistré.</small></div>`);
+      <small>Pour s'entraîner sans compte : rien ne sera enregistré.</small></div>
+      <p class="stats"><button type="button" class="lien" data-vue="confidentialite">Confidentialité</button> : ce que l'appli garde sur toi, et qui le voit.</p>`);
     $('btn-hors-ligne').onclick = entrerHorsLigne;
   }
   c.querySelectorAll('[data-vue]').forEach(b => b.onclick = () => ouvrirCompte(b.dataset.vue));
@@ -1640,8 +1658,24 @@ async function afficherProfil(c) {
     <div class="panel-foot">
       <button class="btn ghost" type="button" id="btn-deconnexion">Me déconnecter</button>
       <button class="btn" type="button" id="btn-jouer">Jouer</button>
+    </div>
+    <div class="pied-compte">
+      <button type="button" class="lien" data-vue="confidentialite">Confidentialité</button>
+      <button type="button" class="lien danger" id="btn-supprimer">Supprimer mon compte</button>
+    </div>
+    <div class="confirmer" id="confirmer-suppression" hidden>
+      <p><b>Supprimer ton compte pour toujours ?</b></p>
+      <p>Tout sera effacé tout de suite : ton pseudo, ton e-mail, tes séries, tes amis et tes défis. On ne pourra pas les récupérer. Demande d'abord à un de tes parents.</p>
+      <p class="hint" id="c-msg"></p>
+      <div class="panel-foot">
+        <button class="btn ghost" type="button" id="btn-garder">Non, je garde mon compte</button>
+        <button class="btn ko" type="button" id="btn-confirmer-suppression">Oui, tout supprimer</button>
+      </div>
     </div>`;
   $('btn-deconnexion').onclick = async () => { vueCompte = null; await sb.auth.signOut(); };
+  $('btn-supprimer').onclick = () => { $('confirmer-suppression').hidden = false; $('btn-supprimer').hidden = true; $('btn-garder').focus(); };
+  $('btn-garder').onclick = () => { $('confirmer-suppression').hidden = true; $('btn-supprimer').hidden = false; msgCompte(''); };
+  $('btn-confirmer-suppression').onclick = supprimerCompte;
   $('btn-jouer').onclick = () => { $('compte').hidden = true; $('answer').focus(); };
   c.querySelectorAll('[data-vue]').forEach(b => b.onclick = () => ouvrirCompte(b.dataset.vue));
   const { data } = await sb.from('series').select('temps, score, longueur, exceptions, joue_le').order('joue_le', { ascending: false }).limit(5);
@@ -1650,6 +1684,53 @@ async function afficherProfil(c) {
     ? data.map(s => `<li><span>${new Date(s.joue_le).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
         <span>${s.temps.map(t => TEMPS[t] ? TEMPS[t].nom : esc(t)).join(', ')}${s.exceptions ? ' · exceptions' : ''}</span><b>${s.score} / ${s.longueur}</b></li>`).join('')
     : '<li>Pas encore de série terminée. À toi de jouer !</li>';
+}
+
+async function supprimerCompte() {
+  const b = $('btn-confirmer-suppression');
+  b.disabled = true; $('btn-garder').disabled = true;
+  msgCompte('Suppression…', true);
+  const { error } = await appel(sb.rpc('supprimer_mon_compte'));
+  if (error) { b.disabled = false; $('btn-garder').disabled = false; return msgCompte(messageErreur(error)); }
+  // On oublie aussi ce que cet appareil gardait du compte (on garde seulement les réglages)
+  ecrireAttente([]);
+  try { localStorage.setItem(STORE, JSON.stringify({ reglages: stats.reglages })); } catch (e) {}
+  stats = lireStats();
+  annonceAccueil = 'Ton compte et toutes tes données ont été supprimés.';
+  vueCompte = null;
+  // Le compte n'existe plus : on ferme la session sur cet appareil seulement
+  await sb.auth.signOut({ scope: 'local' });
+}
+
+function afficherConfidentialite(c) {
+  const contact = CONTACT
+    ? `<a href="mailto:${esc(CONTACT)}">${esc(CONTACT)}</a>`
+    : '<span class="a-remplir">(adresse à compléter par le responsable de l\'appli)</span>';
+  c.innerHTML = `<h2>Confidentialité</h2>
+    <div class="prive">
+      <section><h3>Ce que l'appli garde</h3>
+        <ul>
+          <li>Ton <b>pseudo</b> et ton <b>e-mail</b>.</li>
+          <li>Ton <b>mot de passe</b>, protégé : personne ne peut le lire.</li>
+          <li>Tes <b>résultats</b> : séries jouées, scores, verbes ratés, ainsi que tes amis et tes défis.</li>
+        </ul>
+        <p>C'est tout : pas de nom, pas d'âge, pas d'adresse, pas de publicité. En mode hors ligne, rien n'est envoyé.</p></section>
+      <section><h3>Qui les voit</h3>
+        <ul>
+          <li>Ton <b>e-mail</b> : personne d'autre que toi. Il sert seulement à te connecter.</li>
+          <li>Ton <b>pseudo</b> et tes <b>scores</b> : seulement tes amis acceptés (et les joueurs d'un défi voient les scores de ce défi).</li>
+        </ul>
+        <p>Rien n'est vendu ni donné à personne.</p></section>
+      <section><h3>Où elles sont</h3>
+        <p>Chez Supabase, sur des serveurs en Europe (région de Paris). Tes réglages restent sur ton appareil.</p></section>
+      <section><h3>Supprimer ton compte</h3>
+        <p>Dans <b>Mon compte</b>, appuie sur <b>Supprimer mon compte</b>. Tout est effacé tout de suite et pour toujours.</p></section>
+      <section><h3>Une question ?</h3>
+        <p>Toi ou tes parents pouvez écrire à : ${contact}</p></section>
+    </div>
+    <div class="panel-foot"><button class="btn" type="button" id="btn-retour-prive">Retour</button></div>`;
+  $('btn-retour-prive').onclick = () => ouvrirCompte(session ? 'profil' : 'connexion');
+  $('btn-retour-prive').focus();
 }
 
 // ---------- Amis (code ami) ----------

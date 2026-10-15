@@ -16,3 +16,11 @@
    - la clé publique **anon / publishable** (jamais la clé `service_role` ou *secret*).
 
 Claude les met dans `supabase.json`, lance `python build.py` et pousse sur GitHub.
+
+## Suppression du compte et confidentialité
+
+- **Activer « Supprimer mon compte »** : *SQL Editor* → *New query* → coller tout le fichier
+  `etape4-suppression.sql` → *Run*. Tant que ce n'est pas fait, le bouton affiche
+  « La suppression du compte n'est pas encore activée sur le serveur ».
+- **Adresse de contact** : dans `educatio.html`, remplir `const CONTACT = '';` avec l'adresse
+  e-mail à afficher dans la page Confidentialité, puis `python build.py`.
