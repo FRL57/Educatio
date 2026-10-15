@@ -73,31 +73,42 @@ coupure = SOURCE.index('<div class="wrap">')
 index = TETE + SOURCE[:coupure] + "</head>\n<body>\n" + SOURCE[coupure:] + PIED
 (ICI / "index.html").write_text(index, encoding="utf-8")
 
-# Icônes : dégradé bleu → violet, confettis, « je » en blanc avec le « e » en jaune
+# Icônes : dégradé bleu → violet, grand « E » d'Educatio en blanc,
+# souligné des 6 couleurs des personnes (je, tu, il, nous, vous, ils) comme dans l'appli
 (ICI / "icons").mkdir(exist_ok=True)
-POLICE = "C:/Windows/Fonts/segoeuib.ttf"
-CONFETTIS = [(0.14, 0.16, "#ffd23f"), (0.84, 0.13, "#ef476f"), (0.88, 0.80, "#06d6a0"), (0.12, 0.84, "#ff9f1c"), (0.50, 0.09, "#06d6a0"), (0.90, 0.47, "#ffd23f")]
+POLICE = "C:/Windows/Fonts/seguibl.ttf"
+COULEURS_PERSONNES = ["#ef476f", "#ff9f1c", "#ffd23f", "#06d6a0", "#4cc9f0", "#c77dff"]
+CONFETTIS = [(0.16, 0.17, "#ffd23f"), (0.85, 0.15, "#ef476f"), (0.86, 0.62, "#06d6a0"), (0.14, 0.60, "#ff9f1c")]
 
 
 def icone(taille, marge_sure=False):
+    T = taille * 4  # dessin en grand puis réduit : bords lisses
     haut, bas = (58, 109, 240), (142, 68, 236)
-    img = Image.new("RGB", (taille, taille))
+    img = Image.new("RGB", (T, T))
     d = ImageDraw.Draw(img)
-    for y in range(taille):
-        t = y / (taille - 1)
-        d.line([(0, y), (taille, y)], fill=tuple(round(a + (b - a) * t) for a, b in zip(haut, bas)))
+    for y in range(T):
+        t = y / (T - 1)
+        d.line([(0, y), (T, y)], fill=tuple(round(a + (b - a) * t) for a, b in zip(haut, bas)))
+    k = 0.8 if marge_sure else 1.0  # icône « maskable » : tout tient dans la zone centrale
     if not marge_sure:
         for x, y, c in CONFETTIS:
-            r = taille * 0.035
-            d.ellipse([x * taille - r, y * taille - r, x * taille + r, y * taille + r], fill=c)
-    echelle = 0.44 if marge_sure else 0.56
-    police = ImageFont.truetype(POLICE, round(taille * echelle))
-    boite = d.textbbox((0, 0), "je", font=police)
+            r = T * 0.03
+            d.ellipse([x * T - r, y * T - r, x * T + r, y * T + r], fill=c)
+    police = ImageFont.truetype(POLICE, round(T * 0.58 * k))
+    boite = d.textbbox((0, 0), "E", font=police)
     l, h = boite[2] - boite[0], boite[3] - boite[1]
-    x0, y0 = (taille - l) / 2 - boite[0], (taille - h) / 2 - boite[1]
-    d.text((x0, y0), "j", font=police, fill="#ffffff")
-    d.text((x0 + d.textlength("j", font=police), y0), "e", font=police, fill="#ffd23f")
-    return img
+    barre_h, ecart = T * 0.075 * k, T * 0.06 * k
+    total = h + ecart + barre_h
+    x0, y0 = (T - l) / 2 - boite[0], (T - total) / 2 - boite[1]
+    d.text((x0, y0), "E", font=police, fill="#ffffff")
+    # six petites barres de couleur sous la lettre
+    yb = (T - total) / 2 + h + ecart
+    largeur = T * 0.62 * k
+    pas = largeur / 6
+    xb = (T - largeur) / 2
+    for i, c in enumerate(COULEURS_PERSONNES):
+        d.rounded_rectangle([xb + i * pas + pas * 0.08, yb, xb + (i + 1) * pas - pas * 0.08, yb + barre_h], radius=barre_h / 2, fill=c)
+    return img.resize((taille, taille), Image.LANCZOS)
 
 
 icone(180).save(ICI / "icons/apple-touch-icon.png")
