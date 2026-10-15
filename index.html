@@ -137,6 +137,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 .verbe-line { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .infinitif { font-family: var(--font-display); font-size: 2.7rem; font-weight: 700; line-height: 1.05; letter-spacing: 0.01em; }
 .chip { font-family: var(--font-display); font-size: 0.85rem; font-weight: 600; padding: 4px 12px; border-radius: 999px; background: var(--gc, var(--accent)); color: var(--on-color); }
+.chip.exc { background: var(--sun); color: #3b2a00; }
 form.reponse { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .sujet {
   font-family: var(--font-display); font-size: 1.6rem; font-weight: 600; line-height: 1;
@@ -265,6 +266,13 @@ legend { font-family: var(--font-display); font-weight: 600; font-size: 1.1rem; 
       </div>
     </fieldset>
     <fieldset>
+      <legend>Type de verbes</legend>
+      <div class="options">
+        <label class="opt"><input type="radio" name="sorte" id="sorte-tous" checked> Tous les verbes</label>
+        <label class="opt"><input type="radio" name="sorte" id="sorte-exc"> Seulement les verbes à exceptions <small>(manger, appeler, aller, être…)</small></label>
+      </div>
+    </fieldset>
+    <fieldset>
       <legend>Options</legend>
       <div class="options">
         <label class="opt"><input type="checkbox" id="opt-noms" checked> Sujets variés <small>(« Le chien », « Mes parents »…)</small></label>
@@ -292,6 +300,7 @@ legend { font-family: var(--font-display); font-weight: 600; font-size: 1.1rem; 
       <div class="verbe-line">
         <span class="infinitif" id="infinitif">manger</span>
         <span class="chip" id="groupe">1er groupe</span>
+        <span class="chip exc" id="chip-exc" hidden>Attention, exception !</span>
       </div>
       <form class="reponse" id="form" autocomplete="off">
         <label class="sujet" for="answer" id="sujet">tu</label>
@@ -337,8 +346,15 @@ const PERSONNES = [
 ];
 const PRONOMS_TIRAGE = [['je'], ['tu'], ['il', 'elle', 'on'], ['nous'], ['vous'], ['ils', 'elles']];
 const NOMS = {
-  2: [{ t: 'Le chien', g: 'm' }, { t: 'Ma sœur', g: 'f' }, { t: 'Léo', g: 'm' }, { t: 'Le professeur', g: 'm' }, { t: 'Mon copain', g: 'm' }],
-  5: [{ t: 'Les élèves', g: '?' }, { t: 'Mes parents', g: 'm' }, { t: 'Les oiseaux', g: 'm' }, { t: 'Tom et Léa', g: 'm' }, { t: 'Mes cousines', g: 'f' }],
+  2: [{ t: 'Le chien', g: 'm' }, { t: 'Ma sœur', g: 'f' }, { t: 'Léo', g: 'm' }, { t: 'Le professeur', g: 'm' }, { t: 'Mon copain', g: 'm' },
+      { t: 'La directrice', g: 'f' }, { t: 'Mon grand-père', g: 'm' }, { t: 'Ma meilleure amie', g: 'f' }, { t: 'Le chat', g: 'm' },
+      { t: 'Inès', g: 'f' }, { t: 'Le boulanger', g: 'm' }, { t: 'Ma mère', g: 'f' }, { t: 'Tout le monde', g: 'm' }, { t: 'La classe', g: 'f' },
+      { t: 'Mon équipe', g: 'f' }, { t: 'Le gardien', g: 'm' }],
+  3: [{ t: 'Mon frère et moi', g: '?' }, { t: 'Toi et moi', g: '?' }, { t: 'Léa et moi', g: '?' }, { t: 'Mes amis et moi', g: '?' }],
+  4: [{ t: 'Ton frère et toi', g: '?' }, { t: 'Ta sœur et toi', g: '?' }, { t: 'Toi et tes amis', g: '?' }],
+  5: [{ t: 'Les élèves', g: '?' }, { t: 'Mes parents', g: 'm' }, { t: 'Les oiseaux', g: 'm' }, { t: 'Tom et Léa', g: 'm' }, { t: 'Mes cousines', g: 'f' },
+      { t: 'Les joueurs', g: 'm' }, { t: 'Mes amies', g: 'f' }, { t: 'Les enfants', g: '?' }, { t: 'Les voisins', g: 'm' },
+      { t: 'Lucas et Hugo', g: 'm' }, { t: 'Les filles de la classe', g: 'f' }, { t: 'Les chats', g: 'm' }, { t: 'Mes grands-parents', g: 'm' }],
 };
 
 // ---------- Verbes ----------
@@ -347,16 +363,23 @@ const VERBES = [
   // 1er groupe réguliers
   ...['parler', 'chanter', 'aimer', 'jouer', 'regarder', 'écouter', 'marcher', 'travailler', 'arriver',
       'donner', 'trouver', 'penser', 'habiter', 'crier', 'oublier', 'continuer', 'tomber', 'rester',
-      'demander', 'porter', 'raconter', 'dessiner'].map(i => V(i, 1)),
+      'demander', 'porter', 'raconter', 'dessiner', 'aider', 'apporter', 'chercher', 'danser', 'entrer',
+      'rentrer', 'monter', 'retourner', 'fermer', 'gagner', 'garder', 'laver', 'montrer', 'préparer',
+      'tourner', 'visiter', 'voler', 'ajouter', 'sauter', 'inventer', 'rêver', 'arrêter', 'goûter',
+      'étudier', 'copier', 'remercier', 'distribuer', 'saluer', 'colorier', 'skier'].map(i => V(i, 1)),
   // 1er groupe avec particularités
-  ...['commencer', 'lancer', 'placer', 'avancer', 'prononcer'].map(i => V(i, 1, { mod: 'cer' })),
-  ...['manger', 'nager', 'ranger', 'partager', 'voyager', 'bouger'].map(i => V(i, 1, { mod: 'ger' })),
-  ...['appeler', 'jeter', 'rappeler'].map(i => V(i, 1, { mod: 'double' })),
-  ...['acheter', 'lever', 'mener', 'promener', 'peser', 'préférer', 'espérer', 'répéter', 'compléter'].map(i => V(i, 1, { mod: 'grave' })),
-  ...['nettoyer', 'envoyer', 'essuyer', 'employer', 'aboyer'].map(i => V(i, 1, { mod: 'yer' })),
+  ...['commencer', 'lancer', 'placer', 'avancer', 'prononcer', 'effacer', 'remplacer', 'menacer', 'annoncer'].map(i => V(i, 1, { mod: 'cer' })),
+  ...['manger', 'nager', 'ranger', 'partager', 'voyager', 'bouger', 'changer', 'plonger', 'corriger',
+      'diriger', 'mélanger', 'interroger', 'encourager', 'ronger'].map(i => V(i, 1, { mod: 'ger' })),
+  ...['appeler', 'jeter', 'rappeler', 'épeler', 'projeter', 'renouveler', 'feuilleter'].map(i => V(i, 1, { mod: 'double' })),
+  ...['acheter', 'lever', 'mener', 'promener', 'peser', 'enlever', 'soulever', 'emmener', 'amener', 'achever', 'geler',
+      'préférer', 'espérer', 'répéter', 'compléter', 'posséder', 'célébrer', 'régler', 'sécher', 'suggérer', 'inquiéter'].map(i => V(i, 1, { mod: 'grave' })),
+  ...['nettoyer', 'envoyer', 'renvoyer', 'essuyer', 'employer', 'aboyer', 'appuyer', 'ennuyer', 'tutoyer', 'noyer'].map(i => V(i, 1, { mod: 'yer' })),
   // 2e groupe
   ...['finir', 'choisir', 'grandir', 'réussir', 'remplir', 'obéir', 'réfléchir', 'rougir', 'applaudir',
-      'punir', 'agir', 'bâtir', 'maigrir', 'avertir'].map(i => V(i, 2)),
+      'punir', 'agir', 'bâtir', 'maigrir', 'avertir', 'nourrir', 'guérir', 'saisir', 'vieillir', 'salir',
+      'ralentir', 'atterrir', 'noircir', 'blanchir', 'accomplir', 'définir', 'fleurir', 'trahir', 'envahir',
+      'bondir', 'unir', 'éblouir', 'franchir'].map(i => V(i, 2)),
   // 3e groupe
   V('être', 3, { irr: true, present: ['suis', 'es', 'est', 'sommes', 'êtes', 'sont'],
     note: 'Récite-le à voix haute : je suis, tu es, il est, nous sommes, vous êtes, ils sont. Attention : « vous êtes » ne se termine pas par -ez.' }),
@@ -369,10 +392,15 @@ const VERBES = [
   V('dire', 3, { present: ['di|s', 'di|s', 'di|t', 'dis|ons', 'dites', 'dis|ent'],
     note: 'Attention à « vous dites » (jamais « vous disez »).' }),
   V('venir', 3, { present: ['vien|s', 'vien|s', 'vien|t', 'ven|ons', 'ven|ez', 'vienn|ent'], fam: 'venir' }),
-  V('tenir', 3, { present: ['tien|s', 'tien|s', 'tien|t', 'ten|ons', 'ten|ez', 'tienn|ent'], fam: 'venir' }),
+  ...['tenir', 'revenir', 'devenir', 'obtenir', 'retenir', 'appartenir'].map(i => {
+    const r = i.slice(0, -5); // « re », « de », « ob »… devant -venir / -tenir
+    const c = i.slice(-5, -4); // v ou t
+    return V(i, 3, { present: [r + c + 'ien|s', r + c + 'ien|s', r + c + 'ien|t', r + c + 'en|ons', r + c + 'en|ez', r + c + 'ienn|ent'], fam: 'venir' });
+  }),
   V('prendre', 3, { present: ['prend|s', 'prend|s', 'prend|', 'pren|ons', 'pren|ez', 'prenn|ent'], fam: 'prendre' }),
   V('apprendre', 3, { present: ['apprend|s', 'apprend|s', 'apprend|', 'appren|ons', 'appren|ez', 'apprenn|ent'], fam: 'prendre' }),
   V('comprendre', 3, { present: ['comprend|s', 'comprend|s', 'comprend|', 'compren|ons', 'compren|ez', 'comprenn|ent'], fam: 'prendre' }),
+  V('surprendre', 3, { present: ['surprend|s', 'surprend|s', 'surprend|', 'surpren|ons', 'surpren|ez', 'surprenn|ent'], fam: 'prendre' }),
   V('pouvoir', 3, { present: ['peu|x', 'peu|x', 'peu|t', 'pouv|ons', 'pouv|ez', 'peuv|ent'], fam: 'pouvoir' }),
   V('vouloir', 3, { present: ['veu|x', 'veu|x', 'veu|t', 'voul|ons', 'voul|ez', 'veul|ent'], fam: 'pouvoir' }),
   V('voir', 3, { present: ['voi|s', 'voi|s', 'voi|t', 'voy|ons', 'voy|ez', 'voi|ent'], fam: 'y' }),
@@ -385,24 +413,56 @@ const VERBES = [
     note: 'Le c prend une cédille devant o pour garder le son [s] : je reçois, ils reçoivent. Mais nous recevons (pas de cédille devant e).' }),
   V('boire', 3, { present: ['boi|s', 'boi|s', 'boi|t', 'buv|ons', 'buv|ez', 'boiv|ent'],
     note: 'Trois radicaux : je bois, nous buvons, ils boivent.' }),
-  V('mettre', 3, { present: ['met|s', 'met|s', 'met|', 'mett|ons', 'mett|ez', 'mett|ent'],
-    note: 'Un seul t au singulier (je mets, il met : on n\'ajoute pas de deuxième t), deux t au pluriel (nous mettons).' }),
+  ...['mettre', 'permettre', 'promettre', 'remettre', 'battre'].map(i => {
+    const r = i.slice(0, -4); // me, perme, ba…
+    return V(i, 3, { present: [r + 't|s', r + 't|s', r + 't|', r + 'tt|ons', r + 'tt|ez', r + 'tt|ent'], fam: 'mettre' });
+  }),
   V('partir', 3, { present: ['par|s', 'par|s', 'par|t', 'part|ons', 'part|ez', 'part|ent'], fam: 'partir' }),
   V('sortir', 3, { present: ['sor|s', 'sor|s', 'sor|t', 'sort|ons', 'sort|ez', 'sort|ent'], fam: 'partir' }),
   V('dormir', 3, { present: ['dor|s', 'dor|s', 'dor|t', 'dorm|ons', 'dorm|ez', 'dorm|ent'], fam: 'partir' }),
   V('sentir', 3, { present: ['sen|s', 'sen|s', 'sen|t', 'sent|ons', 'sent|ez', 'sent|ent'], fam: 'partir' }),
+  V('servir', 3, { present: ['ser|s', 'ser|s', 'ser|t', 'serv|ons', 'serv|ez', 'serv|ent'], fam: 'partir' }),
+  V('mentir', 3, { present: ['men|s', 'men|s', 'men|t', 'ment|ons', 'ment|ez', 'ment|ent'], fam: 'partir' }),
+  V('mourir', 3, { present: ['meur|s', 'meur|s', 'meur|t', 'mour|ons', 'mour|ez', 'meur|ent'],
+    note: 'Le radical change : « meur- » quand on entend [eu] (je meurs, ils meurent), « mour- » avec nous et vous (nous mourons).' }),
+  V('fuir', 3, { present: ['fui|s', 'fui|s', 'fui|t', 'fuy|ons', 'fuy|ez', 'fui|ent'], fam: 'y' }),
   V('courir', 3, { present: ['cour|s', 'cour|s', 'cour|t', 'cour|ons', 'cour|ez', 'cour|ent'],
     note: 'Le radical « cour- » ne change pas : je cours, nous courons, ils courent.' }),
   V('ouvrir', 3, { present: ['ouvr|e', 'ouvr|es', 'ouvr|e', 'ouvr|ons', 'ouvr|ez', 'ouvr|ent'], fam: 'ouvrir' }),
-  V('offrir', 3, { present: ['offr|e', 'offr|es', 'offr|e', 'offr|ons', 'offr|ez', 'offr|ent'], fam: 'ouvrir' }),
+  ...['offrir', 'découvrir', 'couvrir', 'souffrir', 'cueillir', 'accueillir'].map(i => {
+    const r = i.slice(0, -2);
+    return V(i, 3, { present: [r + '|e', r + '|es', r + '|e', r + '|ons', r + '|ez', r + '|ent'], fam: 'ouvrir' });
+  }),
   V('lire', 3, { present: ['li|s', 'li|s', 'li|t', 'lis|ons', 'lis|ez', 'lis|ent'], fam: 're' }),
   V('écrire', 3, { present: ['écri|s', 'écri|s', 'écri|t', 'écriv|ons', 'écriv|ez', 'écriv|ent'], fam: 're' }),
   V('vivre', 3, { present: ['vi|s', 'vi|s', 'vi|t', 'viv|ons', 'viv|ez', 'viv|ent'], fam: 're' }),
+  V('suivre', 3, { present: ['sui|s', 'sui|s', 'sui|t', 'suiv|ons', 'suiv|ez', 'suiv|ent'], fam: 're' }),
+  V('décrire', 3, { present: ['décri|s', 'décri|s', 'décri|t', 'décriv|ons', 'décriv|ez', 'décriv|ent'], fam: 're' }),
+  V('relire', 3, { present: ['reli|s', 'reli|s', 'reli|t', 'relis|ons', 'relis|ez', 'relis|ent'], fam: 're' }),
+  ...['conduire', 'construire', 'détruire', 'produire', 'traduire'].map(i => {
+    const r = i.slice(0, -2);
+    return V(i, 3, { present: [r + '|s', r + '|s', r + '|t', r + 's|ons', r + 's|ez', r + 's|ent'], fam: 'uire' });
+  }),
+  ...['peindre', 'éteindre', 'craindre', 'rejoindre', 'plaindre'].map(i => {
+    const r = i.slice(0, -3); // pein, étein, crain, rejoin
+    const g = r.slice(0, -1) + 'gn'; // peign, éteign…
+    return V(i, 3, { present: [r + '|s', r + '|s', r + '|t', g + '|ons', g + '|ez', g + '|ent'], fam: 'indre' });
+  }),
   V('rire', 3, { present: ['ri|s', 'ri|s', 'ri|t', 'ri|ons', 'ri|ez', 'ri|ent'],
     note: 'Le radical « ri- » ne change pas : je ris, nous rions, ils rient.' }),
+  V('sourire', 3, { present: ['souri|s', 'souri|s', 'souri|t', 'souri|ons', 'souri|ez', 'souri|ent'],
+    note: 'Comme « rire », le radical « souri- » ne change pas : je souris, nous sourions, ils sourient.' }),
+  V('apercevoir', 3, { present: ['aperçoi|s', 'aperçoi|s', 'aperçoi|t', 'apercev|ons', 'apercev|ez', 'aperçoiv|ent'],
+    note: 'Comme « recevoir » : le c prend une cédille devant o (j\'aperçois, ils aperçoivent), mais pas devant e (nous apercevons).' }),
   V('connaître', 3, { present: ['connai|s', 'connai|s', 'connaî|t', 'connaiss|ons', 'connaiss|ez', 'connaiss|ent'],
     fam: 'connaitre', alts: { 2: ['connait'] } }),
-  ...['rendre', 'vendre', 'attendre', 'répondre', 'entendre', 'perdre', 'descendre'].map(i => {
+  ...['reconnaître', 'paraître', 'disparaître', 'apparaître', 'naître'].map(i => {
+    const r = i.slice(0, -5); // reconn, par, dispar…
+    return V(i, 3, { present: [r + 'ai|s', r + 'ai|s', r + 'aî|t', r + 'aiss|ons', r + 'aiss|ez', r + 'aiss|ent'],
+      fam: 'connaitre', alts: { 2: [r + 'ait'] } });
+  }),
+  ...['rendre', 'vendre', 'attendre', 'répondre', 'entendre', 'perdre', 'descendre', 'mordre', 'défendre',
+      'fondre', 'pondre', 'tendre', 'tordre', 'confondre'].map(i => {
     const r = i.slice(0, -2);
     return V(i, 3, { present: [r + '|s', r + '|s', r + '|', r + '|ons', r + '|ez', r + '|ent'], fam: 'dre' });
   }),
@@ -416,14 +476,17 @@ const NOTES_MOD = {
   yer: 'Quand la terminaison ne se prononce pas (-e, -es, -ent), le y devient i : je nettoie, ils envoient. Mais nous nettoyons, vous envoyez.',
 };
 const NOTES_FAM = {
-  venir: '« venir » et « tenir » : « ie » au singulier (je viens), « e » avec nous et vous (nous venons), et « ils viennent » prend deux n.',
+  venir: '« venir », « tenir » et leurs cousins : « ie » au singulier (je viens), « e » avec nous et vous (nous venons), et « ils viennent » prend deux n.',
   prendre: '« prendre » et ses cousins (apprendre, comprendre) : le d reste au singulier (je prends, il prend, sans t !), il disparaît au pluriel (nous prenons), et « ils prennent » prend deux n.',
   pouvoir: '« pouvoir » et « vouloir » prennent un x avec je et tu : je peux, tu veux. Le radical change au pluriel : nous pouvons, ils peuvent.',
   y: 'Avec nous et vous, le i devient y : je vois, nous voyons, vous voyez. Mais ils voient, avec un i.',
   partir: 'Au singulier, la consonne qui est juste avant -ir disparaît : partir → je pars, dormir → je dors, sortir → je sors. Elle revient au pluriel : nous partons, nous dormons.',
-  ouvrir: '« ouvrir » et « offrir » se terminent par -ir, mais au présent ils prennent les terminaisons des verbes en -er : j\'ouvre, tu ouvres, il ouvre.',
+  ouvrir: '« ouvrir », « offrir », « cueillir »… se terminent par -ir, mais au présent ils prennent les terminaisons des verbes en -er : j\'ouvre, tu ouvres, il ouvre.',
+  mettre: '« mettre », « battre » et leurs cousins : un seul t au singulier (je mets, il bat : on n\'ajoute pas de t), deux t au pluriel (nous mettons, nous battons).',
+  uire: 'Les verbes en -uire (conduire, construire…) prennent un s au pluriel : je conduis, nous conduisons, ils conduisent.',
+  indre: 'Les verbes en -indre perdent leur d au présent : je peins, il peint. Au pluriel, on écrit « gn » : nous peignons, ils peignent.',
   re: 'Le radical s\'allonge au pluriel : je lis / nous lisons, j\'écris / nous écrivons, je vis / nous vivons.',
-  connaitre: 'Le i prend un accent circonflexe devant le t : il connaît. (Depuis la réforme de 1990, « il connait » sans accent est aussi accepté.)',
+  connaitre: 'Le i prend un accent circonflexe devant le t : il connaît, il paraît. (Depuis la réforme de 1990, « il connait » sans accent est aussi accepté.)',
   dre: 'Les verbes en -dre comme « rendre » gardent le d au singulier et ne prennent pas de t : je rends, tu rends, il rend.',
 };
 
@@ -598,7 +661,9 @@ function casImparfait(v, p, rep) {
 // ---------- Futur simple ----------
 const TERM_FUT = ['ai', 'as', 'a', 'ons', 'ez', 'ont'];
 const FUTUR_IRR = { être: 'ser', avoir: 'aur', aller: 'ir', faire: 'fer', venir: 'viendr', tenir: 'tiendr', pouvoir: 'pourr',
-  vouloir: 'voudr', voir: 'verr', savoir: 'saur', devoir: 'devr', recevoir: 'recevr', courir: 'courr', envoyer: 'enverr' };
+  vouloir: 'voudr', voir: 'verr', savoir: 'saur', devoir: 'devr', recevoir: 'recevr', courir: 'courr', envoyer: 'enverr',
+  renvoyer: 'renverr', revenir: 'reviendr', devenir: 'deviendr', obtenir: 'obtiendr', retenir: 'retiendr', appartenir: 'appartiendr',
+  mourir: 'mourr', apercevoir: 'apercevr', cueillir: 'cueiller', accueillir: 'accueiller' };
 const accentAigu = v => v.mod === 'grave' && /é[^aeiouyéèêë]+er$/.test(v.inf);
 function radicalFutur(v) {
   if (FUTUR_IRR[v.inf]) return FUTUR_IRR[v.inf];
@@ -654,11 +719,20 @@ function casFutur(v, p, rep, f) {
 // ---------- Passé composé ----------
 const AVOIR_PR = ['ai', 'as', 'a', 'avons', 'avez', 'ont'];
 const ETRE_PR = ['suis', 'es', 'est', 'sommes', 'êtes', 'sont'];
-const AUX_ETRE = ['aller', 'venir', 'partir', 'sortir', 'tomber', 'rester', 'arriver', 'descendre'];
+const AUX_ETRE = ['aller', 'venir', 'partir', 'sortir', 'tomber', 'rester', 'arriver', 'descendre', 'entrer', 'rentrer',
+  'monter', 'retourner', 'revenir', 'devenir', 'mourir', 'naître', 'apparaître'];
+const AUX_ETRE_TXT = 'aller, venir, arriver, partir, entrer, sortir, monter, descendre, rester, tomber, naître, mourir, devenir…';
 const PARTICIPES = { être: 'été', avoir: 'eu', aller: 'allé', faire: 'fait', dire: 'dit', venir: 'venu', tenir: 'tenu', prendre: 'pris',
   apprendre: 'appris', comprendre: 'compris', pouvoir: 'pu', vouloir: 'voulu', voir: 'vu', croire: 'cru', savoir: 'su', devoir: 'dû',
   recevoir: 'reçu', boire: 'bu', mettre: 'mis', partir: 'parti', sortir: 'sorti', dormir: 'dormi', sentir: 'senti', courir: 'couru',
-  ouvrir: 'ouvert', offrir: 'offert', lire: 'lu', écrire: 'écrit', vivre: 'vécu', rire: 'ri', connaître: 'connu' };
+  ouvrir: 'ouvert', offrir: 'offert', lire: 'lu', écrire: 'écrit', vivre: 'vécu', rire: 'ri', connaître: 'connu',
+  surprendre: 'surpris', permettre: 'permis', promettre: 'promis', remettre: 'remis', battre: 'battu', revenir: 'revenu',
+  devenir: 'devenu', obtenir: 'obtenu', retenir: 'retenu', appartenir: 'appartenu', servir: 'servi', mentir: 'menti',
+  mourir: 'mort', fuir: 'fui', découvrir: 'découvert', couvrir: 'couvert', souffrir: 'souffert', cueillir: 'cueilli',
+  accueillir: 'accueilli', suivre: 'suivi', décrire: 'décrit', relire: 'relu', conduire: 'conduit', construire: 'construit',
+  détruire: 'détruit', produire: 'produit', traduire: 'traduit', peindre: 'peint', éteindre: 'éteint', craindre: 'craint',
+  rejoindre: 'rejoint', plaindre: 'plaint', sourire: 'souri', apercevoir: 'aperçu', reconnaître: 'reconnu', paraître: 'paru',
+  disparaître: 'disparu', apparaître: 'apparu', naître: 'né' };
 const auxDe = v => AUX_ETRE.includes(v.inf) ? 'être' : 'avoir';
 function participe(v) {
   if (PARTICIPES[v.inf]) return { radical: PARTICIPES[v.inf], term: '' };
@@ -697,7 +771,7 @@ function conseilPasseCompose(v, p, t, item) {
 function reglePasseCompose(v, p) {
   const aux = auxDe(v), pp = forme(participe(v));
   let html = '<p>Le passé composé s\'écrit en <b>deux mots</b> : l\'auxiliaire <b>avoir</b> ou <b>être</b> conjugué au présent, puis le <b>participe passé</b> du verbe.</p>';
-  html += `<p>« ${v.inf} » se conjugue avec <b>${aux}</b>${aux === 'être' ? ' (comme aller, venir, partir, sortir, arriver, rester, tomber, descendre)' : ' (comme la plupart des verbes)'} :</p>`;
+  html += `<p>« ${v.inf} » se conjugue avec <b>${aux}</b>${aux === 'être' ? ` (comme ${AUX_ETRE_TXT})` : ' (comme la plupart des verbes)'} :</p>`;
   html += termsRow(aux === 'être' ? ETRE_PR : AVOIR_PR, p, true);
   html += `<p>${v.g === 1 ? 'Verbes en -er : le participe passé se termine par -é' : v.g === 2 ? 'Verbes du 2e groupe : le participe passé se termine par -i' : 'Verbes du 3e groupe : le participe passé change d\'un verbe à l\'autre (pris, fait, venu, ouvert…), il s\'apprend par cœur'}. Ici : <b>${pp}</b>.</p>`;
   html += aux === 'être'
@@ -746,7 +820,7 @@ function analyserPasseCompose(rep, item) {
     if (a !== auxForme) {
       const homophone = { 'à': 'a', 'et': 'est', 'on': 'ont', 'son': 'sont' }[a];
       if (homophone === auxForme) d.push(`« ${a} » est un autre mot qui se prononce pareil. Ici, c'est l'auxiliaire ${aux}, qui s'écrit « ${auxForme} » : ${exemple}.`);
-      else if (aux === 'être' && AVOIR_PR.includes(a)) d.push(`« ${v.inf} » se conjugue avec l'auxiliaire <b>être</b>, pas avoir : ${exemple}. Retiens : aller, venir, partir, sortir, arriver, rester, tomber et descendre se conjuguent avec être.`);
+      else if (aux === 'être' && AVOIR_PR.includes(a)) d.push(`« ${v.inf} » se conjugue avec l'auxiliaire <b>être</b>, pas avoir : ${exemple}. Retiens : ${AUX_ETRE_TXT} se conjuguent avec être.`);
       else if (aux === 'avoir' && ETRE_PR.includes(a)) d.push(`« ${v.inf} » se conjugue avec l'auxiliaire <b>avoir</b>, pas être : ${exemple}.`);
       else d.push(`L'auxiliaire ${aux} doit être conjugué au présent avec ${sujetTexte(item)} : il faut « ${auxForme} » (tu as écrit « ${esc(a)} »).`);
     }
@@ -761,6 +835,11 @@ const TEMPS = {
   futur: { nom: 'Futur simple', au: 'au futur simple', disponible: true, conjuguer: conjFutur, conseil: conseilFutur, regle: regleFutur, note: noteFutur, cas: casFutur },
   passeCompose: { nom: 'Passé composé', au: 'au passé composé', disponible: true, conjuguer: conjPasseCompose, conseil: conseilPasseCompose, regle: reglePasseCompose, analyser: analyserPasseCompose },
 };
+// Verbes « à exceptions » : ceux qui ne suivent pas la règle simple de leur groupe, pour chaque temps
+TEMPS.present.exception = v => !!v.mod || v.g === 3;
+TEMPS.imparfait.exception = v => v.inf === 'être' || v.mod === 'cer' || v.mod === 'ger' || /[iy]$/.test(radicalImparfait(v));
+TEMPS.futur.exception = v => !!FUTUR_IRR[v.inf] || ['double', 'grave', 'yer'].includes(v.mod);
+TEMPS.passeCompose.exception = v => auxDe(v) === 'être' || !!PARTICIPES[v.inf];
 
 // ---------- Outils ----------
 const $ = id => document.getElementById(id);
@@ -802,11 +881,13 @@ function ecrireStats() { try { localStorage.setItem(STORE, JSON.stringify(stats)
 let stats = lireStats();
 
 // ---------- Réglages ----------
-let reglages = Object.assign({ temps: ['present'], groupes: [1, 2, 3], noms: true, longueur: 10 }, stats.reglages || {});
+let reglages = Object.assign({ temps: ['present'], groupes: [1, 2, 3], exceptions: false, noms: true, longueur: 10 }, stats.reglages || {});
 function construireReglages() {
   $('opt-temps').innerHTML = Object.entries(TEMPS).map(([k, t]) =>
     `<label class="opt ${t.disponible ? '' : 'off'}"><input type="checkbox" id="t-${k}" value="${k}" ${t.disponible ? '' : 'disabled'} ${reglages.temps.includes(k) && t.disponible ? 'checked' : ''}> ${t.nom}${t.disponible ? '' : ' <small>(bientôt)</small>'}</label>`).join('');
   [1, 2, 3].forEach(g => $('g' + g).checked = reglages.groupes.includes(g));
+  $('sorte-exc').checked = !!reglages.exceptions;
+  $('sorte-tous').checked = !reglages.exceptions;
   $('opt-noms').checked = reglages.noms;
   $('len10').checked = reglages.longueur === 10;
   $('len20').checked = reglages.longueur === 20;
@@ -821,7 +902,13 @@ $('btn-appliquer').onclick = () => {
   const groupes = [1, 2, 3].filter(g => $('g' + g).checked);
   if (!temps.length) { $('reglages-hint').textContent = 'Choisis au moins un temps.'; return; }
   if (!groupes.length) { $('reglages-hint').textContent = 'Choisis au moins un groupe de verbes.'; return; }
-  reglages = { temps, groupes, noms: $('opt-noms').checked, longueur: $('len20').checked ? 20 : 10 };
+  const exceptions = $('sorte-exc').checked;
+  const vides = temps.filter(k => !VERBES.some(v => groupes.includes(v.g) && (!exceptions || TEMPS[k].exception(v))));
+  if (vides.length) {
+    $('reglages-hint').textContent = `Il n'y a aucun verbe à exception ${vides.map(k => TEMPS[k].au).join(' ni ')} dans ${groupes.length > 1 ? 'ces groupes' : 'ce groupe'}. Ajoute un groupe ou décoche ce temps.`;
+    return;
+  }
+  reglages = { temps, groupes, exceptions, noms: $('opt-noms').checked, longueur: $('len20').checked ? 20 : 10 };
   stats.reglages = reglages; ecrireStats();
   $('reglages').hidden = true;
   nouvelleSerie();
@@ -831,13 +918,16 @@ $('btn-appliquer').onclick = () => {
 let serie, item, dernierVerbe = null, repondu = false;
 
 function tirerItem() {
-  const candidats = VERBES.filter(v => reglages.groupes.includes(v.g) && v.inf !== dernierVerbe);
+  const temps = pick(reglages.temps);
+  const convient = v => reglages.groupes.includes(v.g) && (!reglages.exceptions || TEMPS[temps].exception(v));
+  let candidats = VERBES.filter(v => convient(v) && v.inf !== dernierVerbe);
+  if (!candidats.length) candidats = VERBES.filter(convient);
   // Les verbes déjà ratés reviennent plus souvent
   const poids = candidats.map(v => 1 + Math.min(4, stats.fautes[v.inf] || 0));
   let r = Math.random() * poids.reduce((a, b) => a + b, 0), verbe = candidats[0];
   for (let i = 0; i < candidats.length; i++) { r -= poids[i]; if (r <= 0) { verbe = candidats[i]; break; } }
   const p = Math.floor(Math.random() * 6);
-  return creerItem(verbe, p, pick(reglages.temps));
+  return creerItem(verbe, p, temps);
 }
 function creerItem(verbe, p, temps) {
   const f = forme(TEMPS[temps].conjuguer(verbe)[p]);
@@ -869,6 +959,7 @@ function questionSuivante() {
   $('infinitif').textContent = item.verbe.inf;
   $('groupe').textContent = ['', '1er groupe', '2e groupe', '3e groupe'][item.verbe.g];
   $('groupe').className = 'chip g' + item.verbe.g;
+  $('chip-exc').hidden = !TEMPS[item.temps].exception(item.verbe);
   $('sujet').textContent = item.sujet;
   const carte = $('carte');
   carte.className = 'carte p' + item.p;
