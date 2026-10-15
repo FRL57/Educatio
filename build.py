@@ -18,8 +18,8 @@ TETE = """<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#f5f7fc" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#10172b" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#eef3ff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14163a" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Educatio">
@@ -33,7 +33,7 @@ TETE = """<!doctype html>
   body { margin: 0; }
   [hidden] { display: none !important; }
   button, input, label { touch-action: manipulation; }
-  .install { background: var(--accent-soft); color: var(--ink); border-radius: 12px; padding: 12px 14px; font-size: .92rem; display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
+  .install { background: var(--sun-soft); color: var(--ink); border: 2px solid var(--sun); border-radius: 16px; padding: 12px 14px; font-size: .92rem; display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
   .install button { background: none; border: 0; color: var(--accent); font-weight: 700; padding: 0 4px; }
 </style>
 """
@@ -64,26 +64,30 @@ coupure = SOURCE.index('<div class="wrap">')
 index = TETE + SOURCE[:coupure] + "</head>\n<body>\n" + SOURCE[coupure:] + PIED
 (ICI / "index.html").write_text(index, encoding="utf-8")
 
-# Icônes : page de cahier bleue, marge rouge, « je » en blanc
+# Icônes : dégradé bleu → violet, confettis, « je » en blanc avec le « e » en jaune
 (ICI / "icons").mkdir(exist_ok=True)
 POLICE = "C:/Windows/Fonts/segoeuib.ttf"
+CONFETTIS = [(0.14, 0.16, "#ffd23f"), (0.84, 0.13, "#ef476f"), (0.88, 0.80, "#06d6a0"), (0.12, 0.84, "#ff9f1c"), (0.50, 0.09, "#06d6a0"), (0.90, 0.47, "#ffd23f")]
 
 
 def icone(taille, marge_sure=False):
-    img = Image.new("RGB", (taille, taille), "#2c56cf")
+    haut, bas = (58, 109, 240), (142, 68, 236)
+    img = Image.new("RGB", (taille, taille))
     d = ImageDraw.Draw(img)
-    pas = taille / 16
-    for i in range(1, 16):
-        y = round(i * pas)
-        d.line([(0, y), (taille, y)], fill="#3d66dc" if i % 4 else "#5277e3", width=max(1, taille // 180))
-    x_marge = round(taille * 0.2)
-    d.rectangle([x_marge, 0, x_marge + max(2, taille // 60), taille], fill="#ec8f9a")
-    echelle = 0.42 if marge_sure else 0.55
+    for y in range(taille):
+        t = y / (taille - 1)
+        d.line([(0, y), (taille, y)], fill=tuple(round(a + (b - a) * t) for a, b in zip(haut, bas)))
+    if not marge_sure:
+        for x, y, c in CONFETTIS:
+            r = taille * 0.035
+            d.ellipse([x * taille - r, y * taille - r, x * taille + r, y * taille + r], fill=c)
+    echelle = 0.44 if marge_sure else 0.56
     police = ImageFont.truetype(POLICE, round(taille * echelle))
-    texte = "je"
-    boite = d.textbbox((0, 0), texte, font=police)
+    boite = d.textbbox((0, 0), "je", font=police)
     l, h = boite[2] - boite[0], boite[3] - boite[1]
-    d.text(((taille - l) / 2 - boite[0] + taille * 0.04, (taille - h) / 2 - boite[1]), texte, font=police, fill="#ffffff")
+    x0, y0 = (taille - l) / 2 - boite[0], (taille - h) / 2 - boite[1]
+    d.text((x0, y0), "j", font=police, fill="#ffffff")
+    d.text((x0 + d.textlength("j", font=police), y0), "e", font=police, fill="#ffd23f")
     return img
 
 
@@ -100,8 +104,8 @@ manifest = {
     "start_url": "./",
     "scope": "./",
     "display": "standalone",
-    "background_color": "#f5f7fc",
-    "theme_color": "#2c56cf",
+    "background_color": "#eef3ff",
+    "theme_color": "#3a6df0",
     "icons": [
         {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
         {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
