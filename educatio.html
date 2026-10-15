@@ -250,6 +250,7 @@ legend { font-family: var(--font-display); font-weight: 600; font-size: 1.1rem; 
     <fieldset>
       <legend>Options</legend>
       <div class="options">
+        <label class="opt"><input type="checkbox" id="opt-badge" checked> Afficher le badge « Attention, exception ! »</label>
         <label class="opt"><input type="checkbox" id="opt-noms" checked> Sujets variés <small>(« Le chien », « Mes parents »…)</small></label>
         <label class="opt"><input type="radio" name="longueur" id="len10" value="10" checked> Séries de 10</label>
         <label class="opt"><input type="radio" name="longueur" id="len20" value="20"> Séries de 20</label>
@@ -856,13 +857,14 @@ function ecrireStats() { try { localStorage.setItem(STORE, JSON.stringify(stats)
 let stats = lireStats();
 
 // ---------- Réglages ----------
-let reglages = Object.assign({ temps: ['present'], groupes: [1, 2, 3], exceptions: false, noms: true, longueur: 10 }, stats.reglages || {});
+let reglages = Object.assign({ temps: ['present'], groupes: [1, 2, 3], exceptions: false, badge: true, noms: true, longueur: 10 }, stats.reglages || {});
 function construireReglages() {
   $('opt-temps').innerHTML = Object.entries(TEMPS).map(([k, t]) =>
     `<label class="opt ${t.disponible ? '' : 'off'}"><input type="checkbox" id="t-${k}" value="${k}" ${t.disponible ? '' : 'disabled'} ${reglages.temps.includes(k) && t.disponible ? 'checked' : ''}> ${t.nom}${t.disponible ? '' : ' <small>(bientôt)</small>'}</label>`).join('');
   [1, 2, 3].forEach(g => $('g' + g).checked = reglages.groupes.includes(g));
   $('sorte-exc').checked = !!reglages.exceptions;
   $('sorte-tous').checked = !reglages.exceptions;
+  $('opt-badge').checked = reglages.badge !== false;
   $('opt-noms').checked = reglages.noms;
   $('len10').checked = reglages.longueur === 10;
   $('len20').checked = reglages.longueur === 20;
@@ -883,7 +885,7 @@ $('btn-appliquer').onclick = () => {
     $('reglages-hint').textContent = `Il n'y a aucun verbe à exception ${vides.map(k => TEMPS[k].au).join(' ni ')} dans ${groupes.length > 1 ? 'ces groupes' : 'ce groupe'}. Ajoute un groupe ou décoche ce temps.`;
     return;
   }
-  reglages = { temps, groupes, exceptions, noms: $('opt-noms').checked, longueur: $('len20').checked ? 20 : 10 };
+  reglages = { temps, groupes, exceptions, badge: $('opt-badge').checked, noms: $('opt-noms').checked, longueur: $('len20').checked ? 20 : 10 };
   stats.reglages = reglages; ecrireStats();
   $('reglages').hidden = true;
   nouvelleSerie();
@@ -934,7 +936,7 @@ function questionSuivante() {
   $('infinitif').textContent = item.verbe.inf;
   $('groupe').textContent = ['', '1er groupe', '2e groupe', '3e groupe'][item.verbe.g];
   $('groupe').className = 'chip g' + item.verbe.g;
-  $('chip-exc').hidden = !TEMPS[item.temps].exception(item.verbe);
+  $('chip-exc').hidden = reglages.badge === false || !TEMPS[item.temps].exception(item.verbe);
   $('sujet').textContent = item.sujet;
   const carte = $('carte');
   carte.className = 'carte p' + item.p;
