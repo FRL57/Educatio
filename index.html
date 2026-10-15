@@ -209,6 +209,12 @@ legend { font-family: var(--font-display); font-weight: 600; font-size: 1.1rem; 
 /* Compte */
 .actions-tete { display: flex; gap: 10px; flex-wrap: wrap; }
 .porte-fermee .actions-tete { display: none; }
+#btn-quitter-hl, .pill-hl { display: none; }
+.hors-ligne #btn-quitter-hl { display: inline-block; }
+.hors-ligne .pill-hl { display: inline-flex; background: var(--sun-soft); border-color: var(--sun); align-self: center; }
+.hors-ligne #btn-compte { display: none !important; }
+.choix-hl { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding-top: 14px; border-top: 2px dashed var(--line); }
+.choix-hl small { color: var(--ink-soft); }
 .accueil { display: grid; gap: 4px; }
 .accueil h2 { margin: 0; }
 .accueil p { margin: 0; color: var(--ink-soft); }
@@ -277,6 +283,8 @@ legend { font-family: var(--font-display); font-weight: 600; font-size: 1.1rem; 
       <p>Entraînement à la conjugaison · 6e</p>
     </div>
     <div class="actions-tete">
+      <span class="pill pill-hl">Hors ligne</span>
+      <button class="btn ghost" id="btn-quitter-hl" type="button">Me connecter</button>
       <button class="btn ghost" id="btn-compte" type="button" hidden>Mon compte</button>
       <button class="btn ghost" id="btn-reglages" type="button">Réglages</button>
     </div>
@@ -912,7 +920,14 @@ function lireStats() {
   try { return Object.assign({ total: 0, bonnes: 0, record: 0, fautes: {}, reglages: null }, JSON.parse(localStorage.getItem(STORE) || '{}')); }
   catch (e) { return { total: 0, bonnes: 0, record: 0, fautes: {}, reglages: null }; }
 }
-function ecrireStats() { try { localStorage.setItem(STORE, JSON.stringify(stats)); } catch (e) {} }
+// Mode hors ligne : on joue sans compte et rien n'est gardé (seuls les réglages le sont)
+let modeHorsLigne = false;
+function ecrireStats() {
+  try {
+    if (modeHorsLigne) { const garde = lireStats(); garde.reglages = stats.reglages; localStorage.setItem(STORE, JSON.stringify(garde)); }
+    else localStorage.setItem(STORE, JSON.stringify(stats));
+  } catch (e) {}
+}
 let stats = lireStats();
 
 // ---------- Réglages ----------
@@ -1232,7 +1247,7 @@ function finDeSerie() {
     <div class="score-big">${s}<small> / ${n}</small></div>
     ${serie.erreurs.length ? `<div><span class="label">Tes erreurs</span><ul class="erreurs">${serie.erreurs.map(e =>
       `<li><span class="barre" style="text-decoration:line-through">${esc(e.item.sujet)} ${esc(e.rep)}</span> → <b>${esc(e.item.sujet)}${e.item.sujet.endsWith("'") ? '' : ' '}${e.bonne}</b> <small>(${e.item.verbe.inf})</small></li>`).join('')}</ul></div>` : ''}
-    <p class="stats">Depuis le début : ${stats.bonnes} bonnes réponses sur ${stats.total} · record de ${stats.record} bonnes réponses d'affilée.</p>
+    ${modeHorsLigne ? '' : `<p class="stats">Depuis le début : ${stats.bonnes} bonnes réponses sur ${stats.total} · record de ${stats.record} bonnes réponses d'affilée.</p>`}
     <p class="stats" id="fin-compte"></p>
     <div class="panel-foot">
       ${serie.erreurs.length ? '<button class="btn ghost" id="btn-erreurs" type="button">Refaire mes erreurs</button>' : ''}
@@ -1251,7 +1266,8 @@ function finDeSerie() {
     p_record: stats.record, p_erreurs: serie.erreurs.map(e => ({ v: e.item.verbe.inf, p: e.item.p, t: e.item.temps })), p_fautes: stats.fautes,
   }).then(etat => {
     const zone = $('fin-compte'); if (!zone) return;
-    if (etat === 'ok') zone.textContent = 'Résultat enregistré dans ton compte.';
+    if (etat === 'hors-ligne') zone.textContent = 'Mode hors ligne : ce résultat n\'est pas enregistré.';
+    else if (etat === 'ok') zone.textContent = 'Résultat enregistré dans ton compte.';
     else if (etat === 'attente') zone.textContent = 'Pas de connexion : le résultat sera enregistré dans ton compte dès que possible.';
     else if (sb) { zone.innerHTML = '<button type="button" class="lien" id="btn-fin-compte">Crée un compte</button> pour garder tes résultats et suivre tes progrès.'; $('btn-fin-compte').onclick = () => ouvrirCompte('inscription'); }
   });
@@ -1366,6 +1382,12 @@ function ouvrirCompte(vue) {
       <p class="hint" id="c-msg"></p>
       <div class="panel-foot"><button class="btn" type="submit">Enregistrer</button></div>
     </form>`;
+  if (!session && VUES_ACCUEIL.includes(vue)) {
+    c.insertAdjacentHTML('beforeend', `<div class="choix-hl">
+      <button type="button" class="lien" id="btn-hors-ligne">Jouer hors ligne</button>
+      <small>Pour s'entraîner sans compte : rien ne sera enregistré.</small></div>`);
+    $('btn-hors-ligne').onclick = entrerHorsLigne;
+  }
   c.querySelectorAll('[data-vue]').forEach(b => b.onclick = () => ouvrirCompte(b.dataset.vue));
   $('f-compte').onsubmit = e => { e.preventDefault(); ACTIONS_COMPTE[vue](); };
   const premier = c.querySelector('input'); if (premier) premier.focus();
@@ -1452,6 +1474,7 @@ async function appel(requete) { try { return await requete; } catch (e) { return
 function lireAttente() { try { return JSON.parse(localStorage.getItem(ATTENTE) || '[]'); } catch (e) { return []; } }
 function ecrireAttente(l) { try { localStorage.setItem(ATTENTE, JSON.stringify(l)); } catch (e) {} }
 async function enregistrerSerieEnLigne(donnees) {
+  if (modeHorsLigne) return 'hors-ligne';
   if (!sb || !session) return 'local';
   const { error } = await appel(sb.rpc('enregistrer_serie', donnees));
   if (error) { ecrireAttente([...lireAttente(), { uid: session.user.id, donnees }]); return 'attente'; }
@@ -1470,7 +1493,21 @@ async function envoyerEnAttente() {
   ecrireAttente(reste);
 }
 
+function entrerHorsLigne() {
+  modeHorsLigne = true;
+  document.body.classList.add('hors-ligne');
+  afficherPorte(true);
+  nouvelleSerie();
+}
+function quitterHorsLigne(versConnexion = true) {
+  modeHorsLigne = false;
+  document.body.classList.remove('hors-ligne');
+  stats = lireStats(); // oublie tout ce qui a été joué hors ligne
+  if (versConnexion) { vueCompte = null; afficherPorte(false); }
+}
+
 function initCompte() {
+  $('btn-quitter-hl').onclick = () => quitterHorsLigne();
   majBoutonCompte();
   if (!sb) return;
   // En attendant de savoir si un compte est déjà connecté, on ne montre pas le jeu
@@ -1483,7 +1520,8 @@ function initCompte() {
   sb.auth.onAuthStateChange((evenement, s) => {
     session = s;
     if (evenement === 'PASSWORD_RECOVERY') ouvrirCompte('nouveau-mdp');
-    afficherPorte(!!s);
+    if (s && modeHorsLigne) quitterHorsLigne(false);
+    afficherPorte(!!s || modeHorsLigne);
     // On sort du rappel avant de reparler au serveur (recommandation Supabase)
     setTimeout(chargerProfil, 0);
   });
