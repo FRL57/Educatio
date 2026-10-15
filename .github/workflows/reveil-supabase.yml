@@ -1,0 +1,29 @@
+# Réveil du projet Supabase
+# Sur l'offre gratuite, Supabase met un projet en pause après 7 jours sans activité.
+# Cette tâche interroge la base tous les 3 jours pour qu'elle reste éveillée,
+# même pendant les vacances. Si la requête échoue, GitHub envoie un e-mail.
+name: Réveil Supabase
+
+on:
+  schedule:
+    - cron: "0 6 */3 * *"   # tous les 3 jours, vers 8 h (heure de Paris)
+  workflow_dispatch:         # bouton « Run workflow » pour la lancer à la main
+
+jobs:
+  reveil:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Interroger la base
+        run: |
+          URL=$(python3 -c "import json; print(json.load(open('supabase.json'))['url'])")
+          CLE=$(python3 -c "import json; print(json.load(open('supabase.json'))['cle'])")
+          # Fonction publique et sans effet : demande si un pseudo est libre
+          CODE=$(curl -s -o reponse.txt -w "%{http_code}" -X POST "$URL/rest/v1/rpc/pseudo_disponible" \
+            -H "apikey: $CLE" -H "Content-Type: application/json" -d '{"p":"reveil_automatique"}')
+          echo "Réponse $CODE : $(cat reponse.txt)"
+          if [ "$CODE" != "200" ]; then
+            echo "::error::Supabase n'a pas répondu (code $CODE). Le projet est peut-être en pause : ouvrez supabase.com et cliquez sur « Restore project »."
+            exit 1
+          fi
