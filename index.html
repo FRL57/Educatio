@@ -1256,7 +1256,7 @@ function finDeSerie() {
 // ---------- Compte en ligne (Supabase) ----------
 // Sans serveur configuré (adresse vide), l'appli marche seule, sans compte.
 // build.py remplit ces deux valeurs à partir de supabase.json pour la version en ligne.
-const SUPABASE_URL = '', SUPABASE_CLE = '';
+const SUPABASE_URL = "https://hiizshjoqqkopnokgndp.supabase.co", SUPABASE_CLE = "sb_publishable_c6g2wJRiFvQfqUkzYB8uBQ_Lkj1ZgZl";
 const sb = SUPABASE_URL && window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_CLE) : null;
 const ATTENTE = 'educatio-attente';
 const PSEUDO_OK = /^[A-Za-z0-9_-]{3,20}$/;
