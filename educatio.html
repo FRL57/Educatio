@@ -166,6 +166,7 @@ form.reponse { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .tableau div { padding: 6px 12px; border-radius: 12px; font-size: 1.08rem; border-left: 5px solid var(--pc); background: var(--bg); }
 .tableau div.here { background: var(--term-soft); box-shadow: inset 0 0 0 2px var(--term); }
 .tableau .pr { color: var(--pc); font-weight: 700; }
+.accord { color: var(--ink-soft); }
 .next-row { display: flex; justify-content: flex-end; }
 
 /* Réglages */
@@ -294,9 +295,11 @@ legend { font-family: var(--font-display); font-weight: 600; font-size: 1.1rem; 
                  futur…), il suffit d'y écrire une entrée avec :
                    conjuguer(verbe) -> 6 × { radical, term }
                    conseil(verbe, personne, term) -> phrase d'aide
-                   regle(verbe) -> HTML de la règle
-                 puis de passer disponible: true. Le reste (questions,
-                 correction, tableau) fonctionne sans changement.
+                   regle(verbe, personne, item) -> HTML de la règle
+                   note(verbe) -> remarque propre au verbe
+                   cas(verbe, personne, réponse, forme) -> erreurs typiques
+                 ou, pour un temps composé, analyser(réponse, item).
+                 Le reste (questions, correction, tableau) suit tout seul.
    ===================================================================== */
 
 const PERSONNES = [
@@ -309,8 +312,8 @@ const PERSONNES = [
 ];
 const PRONOMS_TIRAGE = [['je'], ['tu'], ['il', 'elle', 'on'], ['nous'], ['vous'], ['ils', 'elles']];
 const NOMS = {
-  2: ['Le chien', 'Ma sœur', 'Léo', 'Le professeur', 'Mon copain'],
-  5: ['Les élèves', 'Mes parents', 'Les oiseaux', 'Tom et Léa', 'Mes cousines'],
+  2: [{ t: 'Le chien', g: 'm' }, { t: 'Ma sœur', g: 'f' }, { t: 'Léo', g: 'm' }, { t: 'Le professeur', g: 'm' }, { t: 'Mon copain', g: 'm' }],
+  5: [{ t: 'Les élèves', g: '?' }, { t: 'Mes parents', g: 'm' }, { t: 'Les oiseaux', g: 'm' }, { t: 'Tom et Léa', g: 'm' }, { t: 'Mes cousines', g: 'f' }],
 };
 
 // ---------- Verbes ----------
@@ -433,6 +436,11 @@ function conj1(v) {
   });
 }
 function conjPresent(v) {
+  const formes = conjPresentBrut(v);
+  if (v.alts) formes.forEach((f, p) => { if (v.alts[p]) f.alts = v.alts[p]; });
+  return formes;
+}
+function conjPresentBrut(v) {
   if (v.present) return v.present.map(f => {
     if (!f.includes('|')) return { radical: f, term: '', entier: true };
     const [r, t] = f.split('|');
@@ -501,11 +509,232 @@ function reglePresent(v, p) {
 }
 function noteVerbe(v) { return v.note || NOTES_MOD[v.mod] || NOTES_FAM[v.fam] || ''; }
 
+function termsRow(liste, p, mots = false) {
+  return '<div class="terms-row">' + liste.map((t, i) => {
+    const pr = ['je', 'tu', 'il', 'nous', 'vous', 'ils'][i];
+    const txt = mots ? (i === 0 && commenceVoyelle(t) ? 'j\'' + t : pr + ' ' + t) : pr + ' -' + (t || '∅');
+    return `<span class="p${i} ${i === p ? 'here' : ''}">${txt}</span>`;
+  }).join('') + '</div>';
+}
+const jeForme = f => pronomPour(0, f) + f;
+
+// ---------- Imparfait ----------
+const TERM_IMP = ['ais', 'ais', 'ait', 'ions', 'iez', 'aient'];
+function radicalImparfait(v) {
+  if (v.inf === 'être') return 'ét';
+  return forme(conjPresent(v)[3]).replace(/ons$/, '');
+}
+function conjImparfait(v) {
+  const r = radicalImparfait(v);
+  return TERM_IMP.map((t, p) => {
+    let rad = r;
+    if (p === 3 || p === 4) {
+      if (v.mod === 'cer') rad = r.replace(/ç$/, 'c');
+      if (v.mod === 'ger') rad = r.replace(/e$/, '');
+    }
+    return { radical: rad, term: t };
+  });
+}
+function noteImparfait(v) {
+  if (v.inf === 'être') return '« être » est le seul verbe dont le radical de l\'imparfait ne vient pas de « nous » au présent : j\'étais, nous étions.';
+  if (v.mod === 'cer') return 'Devant a, le c prend une cédille pour garder le son [s] : je commençais, ils commençaient. Devant i, pas besoin : nous commencions.';
+  if (v.mod === 'ger') return 'Devant a, on garde le e après le g pour garder le son [j] : je mangeais, ils mangeaient. Devant i, pas besoin : nous mangions.';
+  const r = radicalImparfait(v);
+  if (/i$/.test(r)) return `Le radical se termine par i (nous ${r}ons) : avec nous et vous, on a donc deux i : nous ${r}ions, vous ${r}iez.`;
+  if (/y$/.test(r)) return `Avec nous et vous, on écrit y puis i : nous ${r}ions, vous ${r}iez.`;
+  return '';
+}
+function conseilImparfait(v, p) {
+  return [
+    'À l\'imparfait, avec je, la terminaison est -ais : je chantais, je finissais.',
+    'À l\'imparfait, avec tu, la terminaison est -ais : tu chantais, tu finissais.',
+    'À l\'imparfait, avec il, elle, on, la terminaison est -ait : il chantait.',
+    'À l\'imparfait, avec nous, la terminaison est -ions : nous chantions.',
+    'À l\'imparfait, avec vous, la terminaison est -iez : vous chantiez.',
+    'À l\'imparfait, avec ils et elles, la terminaison est -aient : ils chantaient. Ça se prononce comme -ait, mais ça s\'écrit -aient !',
+  ][p];
+}
+function regleImparfait(v, p) {
+  let html = v.inf === 'être'
+    ? '<p>Exception : pour « être », le radical de l\'imparfait est <b>ét-</b> (j\'étais). Les terminaisons sont les mêmes que pour tous les verbes :</p>'
+    : `<p>Pour former l'imparfait, on prend le radical de « nous » au présent : nous ${forme(conjPresent(v)[3])} → <b>${radicalImparfait(v)}-</b>. Puis on ajoute les terminaisons, qui sont les mêmes pour tous les verbes :</p>`;
+  html += termsRow(TERM_IMP, p);
+  const note = noteImparfait(v); if (note) html += `<p>${note}</p>`;
+  return html;
+}
+function casImparfait(v, p, rep) {
+  const msgs = [];
+  if (p === 5 && /(ait|ais|ai|ent)$/.test(rep)) msgs.push('Avec ils et elles, l\'imparfait se termine par -aient : ils chantaient. On ne l\'entend pas, mais il faut l\'écrire !');
+  if ((p === 0 || p === 1) && /(ait|ai)$/.test(rep)) msgs.push(`Avec ${p ? 'tu' : 'je'}, on écrit -ais avec un s : ${p ? 'tu' : 'je'} chantais.`);
+  if (p === 2 && /ais$/.test(rep)) msgs.push('Avec il, elle, on, on écrit -ait avec un t : il chantait.');
+  return { msgs, radical: false };
+}
+
+// ---------- Futur simple ----------
+const TERM_FUT = ['ai', 'as', 'a', 'ons', 'ez', 'ont'];
+const FUTUR_IRR = { être: 'ser', avoir: 'aur', aller: 'ir', faire: 'fer', venir: 'viendr', tenir: 'tiendr', pouvoir: 'pourr',
+  vouloir: 'voudr', voir: 'verr', savoir: 'saur', devoir: 'devr', recevoir: 'recevr', courir: 'courr', envoyer: 'enverr' };
+const accentAigu = v => v.mod === 'grave' && /é[^aeiouyéèêë]+er$/.test(v.inf);
+function radicalFutur(v) {
+  if (FUTUR_IRR[v.inf]) return FUTUR_IRR[v.inf];
+  if (v.g === 1) return accentAigu(v) ? v.inf : conj1(v)[0].radical + 'er';
+  if (v.inf.endsWith('re')) return v.inf.slice(0, -1);
+  return v.inf;
+}
+function conjFutur(v) {
+  const r = radicalFutur(v);
+  // Orthographe rectifiée de 1990 acceptée : je préfèrerai, il connaitra
+  const alt = accentAigu(v) ? remplacerDernierE(v.inf.slice(0, -2)) + 'er' : r.includes('î') ? r.replace('î', 'i') : null;
+  return TERM_FUT.map(t => ({ radical: r, term: t, alts: alt ? [alt + t] : [] }));
+}
+function noteFutur(v) {
+  const r = radicalFutur(v);
+  if (FUTUR_IRR[v.inf]) return `Le futur de « ${v.inf} » a un radical irrégulier : « ${r}- » (${jeForme(r + 'ai')}). Il s'apprend par cœur.`;
+  if (v.mod === 'double') return `On double la consonne, comme dans « ${jeForme(conj1(v)[0].radical + 'e')} » au présent : ${jeForme(r + 'ai')}.`;
+  if (v.mod === 'grave') return accentAigu(v)
+    ? `Au futur, le é de l'infinitif reste un é : ${jeForme(r + 'ai')}. (Depuis la réforme de 1990, « ${jeForme(remplacerDernierE(v.inf.slice(0, -2)) + 'erai')} » est aussi accepté.)`
+    : `Le e devient è, comme dans « ${jeForme(conj1(v)[0].radical + 'e')} » au présent : ${jeForme(r + 'ai')}.`;
+  if (v.mod === 'yer') return `Le y devient i : ${jeForme(r + 'ai')}.`;
+  if (v.g === 1 && /[aeiouéy]er$/.test(v.inf)) return `N'oublie pas le e de l'infinitif, même si on ne l'entend presque pas : ${jeForme(r + 'ai')} (${v.inf} + ai).`;
+  if (v.inf.endsWith('re')) return `Les verbes en -re perdent leur e final : ${v.inf} → ${jeForme(r + 'ai')}.`;
+  return '';
+}
+function conseilFutur(v, p) {
+  return [
+    'Au futur, avec je, la terminaison est -ai : je chanterai. (Avec un s, « -rais », c\'est un autre temps : le conditionnel.)',
+    'Au futur, avec tu, la terminaison est -as : tu chanteras.',
+    'Au futur, avec il, elle, on, la terminaison est -a, sans t : il chantera.',
+    'Au futur, avec nous, la terminaison est -ons : nous chanterons.',
+    'Au futur, avec vous, la terminaison est -ez : vous chanterez.',
+    'Au futur, avec ils et elles, la terminaison est -ont : ils chanteront.',
+  ][p];
+}
+function regleFutur(v, p) {
+  const r = radicalFutur(v);
+  let html = FUTUR_IRR[v.inf]
+    ? `<p>« ${v.inf} » a un radical irrégulier au futur : <b>${r}-</b>. On y ajoute les terminaisons habituelles :</p>`
+    : `<p>Au futur simple, on part de l'infinitif${v.inf.endsWith('re') ? ' sans son e final' : ''} : ${v.inf} → <b>${r}-</b>. Puis on ajoute :</p>`;
+  html += termsRow(TERM_FUT, p) + '<p>Astuce : ces terminaisons ressemblent au verbe avoir au présent (j\'ai, tu as, il a, ils ont).</p>';
+  const note = noteFutur(v); if (note) html += `<p>${note}</p>`;
+  return html;
+}
+function casFutur(v, p, rep, f) {
+  const msgs = [];
+  if (p === 0 && rep === forme(f) + 's') msgs.push('« -rais » avec un s, c\'est le conditionnel (je chanterais si…). Au futur, avec je, on écrit -ai sans s : je chanterai.');
+  if (p === 2 && /at$/.test(rep)) msgs.push('Pas de t au futur avec il : il chantera.');
+  if (p === 5 && /(ons|ent)$/.test(rep)) msgs.push('Au futur, avec ils et elles, la terminaison est -ont : ils chanteront.');
+  return { msgs, radical: false };
+}
+
+// ---------- Passé composé ----------
+const AVOIR_PR = ['ai', 'as', 'a', 'avons', 'avez', 'ont'];
+const ETRE_PR = ['suis', 'es', 'est', 'sommes', 'êtes', 'sont'];
+const AUX_ETRE = ['aller', 'venir', 'partir', 'sortir', 'tomber', 'rester', 'arriver', 'descendre'];
+const PARTICIPES = { être: 'été', avoir: 'eu', aller: 'allé', faire: 'fait', dire: 'dit', venir: 'venu', tenir: 'tenu', prendre: 'pris',
+  apprendre: 'appris', comprendre: 'compris', pouvoir: 'pu', vouloir: 'voulu', voir: 'vu', croire: 'cru', savoir: 'su', devoir: 'dû',
+  recevoir: 'reçu', boire: 'bu', mettre: 'mis', partir: 'parti', sortir: 'sorti', dormir: 'dormi', sentir: 'senti', courir: 'couru',
+  ouvrir: 'ouvert', offrir: 'offert', lire: 'lu', écrire: 'écrit', vivre: 'vécu', rire: 'ri', connaître: 'connu' };
+const auxDe = v => AUX_ETRE.includes(v.inf) ? 'être' : 'avoir';
+function participe(v) {
+  if (PARTICIPES[v.inf]) return { radical: PARTICIPES[v.inf], term: '' };
+  if (v.g === 1) return { radical: v.inf.slice(0, -2), term: 'é' };
+  if (v.g === 2) return { radical: v.inf.slice(0, -2), term: 'i' };
+  return { radical: v.inf.slice(0, -2), term: 'u' }; // verbes en -dre : rendu, vendu
+}
+const SUFFIXES_TABLE = ['(e)', '(e)', '(e)', '(e)s', '(e)(s)', '(e)s'];
+function conjPasseCompose(v) {
+  const pp = participe(v), etre = auxDe(v) === 'être';
+  return (etre ? ETRE_PR : AVOIR_PR).map((a, p) => ({ radical: a + ' ' + pp.radical, term: pp.term, suffixe: etre ? SUFFIXES_TABLE[p] : '' }));
+}
+// Avec être, terminaisons d'accord acceptées selon le sujet
+function accordsPossibles(item) {
+  const p = item.p, g = item.genre;
+  if (p === 0 || p === 1) return ['', 'e'];
+  if (p === 2) return g === 'm' ? [''] : g === 'f' ? ['e'] : ['', 's', 'e', 'es'];
+  if (p === 3) return ['s', 'es'];
+  if (p === 4) return ['', 'e', 's', 'es'];
+  return g === 'm' ? ['s'] : g === 'f' ? ['es'] : ['s', 'es'];
+}
+const accordAffiche = l => l.length === 1 ? l[0] : l.length === 4 ? '(e)(s)' : l[0] === '' ? '(e)' : '(e)s';
+function explAccord(item, pp) {
+  const g = item.genre, p = item.p;
+  if (p === 0 || p === 1) return `« ${pp} » pour un garçon, « ${pp}e » pour une fille`;
+  if (p === 2) return g === 'f' ? `c'est féminin singulier, on ajoute -e : ${pp}e` : g === 'm' ? `c'est masculin singulier, on n'ajoute rien : ${pp}` : `avec « on », on peut écrire ${pp}, ou ${pp}s si « on » veut dire « nous »`;
+  if (p === 3) return `c'est pluriel, on ajoute -s : ${pp}s (ou ${pp}es si ce sont toutes des filles)`;
+  if (p === 4) return `${pp}s au pluriel (${pp}es pour des filles), ou ${pp} / ${pp}e si on vouvoie une seule personne`;
+  return g === 'f' ? `c'est féminin pluriel, on ajoute -es : ${pp}es` : g === 'm' ? `c'est masculin pluriel, on ajoute -s : ${pp}s` : `c'est pluriel : ${pp}s (ou ${pp}es si ce sont toutes des filles)`;
+}
+function conseilPasseCompose(v, p, t, item) {
+  const aux = auxDe(v), pp = forme(participe(v));
+  return `Passé composé = auxiliaire ${aux} au présent (« ${(aux === 'être' ? ETRE_PR : AVOIR_PR)[p]} ») + participe passé (« ${pp} »).`
+    + (aux === 'être' && item ? ` Avec être, le participe s'accorde avec le sujet : ${explAccord(item, pp)}.` : '');
+}
+function reglePasseCompose(v, p) {
+  const aux = auxDe(v), pp = forme(participe(v));
+  let html = '<p>Le passé composé s\'écrit en <b>deux mots</b> : l\'auxiliaire <b>avoir</b> ou <b>être</b> conjugué au présent, puis le <b>participe passé</b> du verbe.</p>';
+  html += `<p>« ${v.inf} » se conjugue avec <b>${aux}</b>${aux === 'être' ? ' (comme aller, venir, partir, sortir, arriver, rester, tomber, descendre)' : ' (comme la plupart des verbes)'} :</p>`;
+  html += termsRow(aux === 'être' ? ETRE_PR : AVOIR_PR, p, true);
+  html += `<p>${v.g === 1 ? 'Verbes en -er : le participe passé se termine par -é' : v.g === 2 ? 'Verbes du 2e groupe : le participe passé se termine par -i' : 'Verbes du 3e groupe : le participe passé change d\'un verbe à l\'autre (pris, fait, venu, ouvert…), il s\'apprend par cœur'}. Ici : <b>${pp}</b>.</p>`;
+  html += aux === 'être'
+    ? `<p>Avec être, le participe s'accorde avec le sujet : elle est ${pp}e, ils sont ${pp}s, elles sont ${pp}es.</p>`
+    : `<p>Avec avoir, le participe ne s'accorde pas avec le sujet : elles ont ${pp}.</p>`;
+  return html;
+}
+function diagParticipe(ecrit, v, ppBase, aux, accords, item) {
+  if (aux === 'avoir' && (v.g === 1 ? ['e', 's', 'es'] : ['e', 'es']).some(x => ecrit === ppBase + x))
+    return [`Avec l'auxiliaire avoir, le participe passé ne s'accorde pas avec le sujet : on écrit « ${ppBase} », sans e ni s (elles ont mangé, ils ont fini).`];
+  if (aux === 'être' && ['', 'e', 's', 'es'].some(x => ecrit === ppBase + x))
+    return [`Avec l'auxiliaire être, le participe passé s'accorde avec le sujet ${sujetTexte(item)} : ${explAccord(item, ppBase)}.`];
+  const out = [];
+  if (ecrit === v.inf) out.push(`Après l'auxiliaire, on écrit le participe passé « ${ppBase} », pas l'infinitif « ${v.inf} ». Astuce : remplace par le verbe « vendre ». On dit « j'ai vendu » et pas « j'ai vendre » : il faut donc le participe.`);
+  else {
+    const proche = accords.map(x => ppBase + x).find(x => sansAccent(x) === sansAccent(ecrit));
+    if (proche) out.push(...diagAccents(ecrit, proche));
+  }
+  if (v.g === 1) out.push('Le participe passé des verbes en -er se termine toujours par -é : mangé, joué, parlé.');
+  else if (v.g === 2) out.push(`Le participe passé des verbes du 2e groupe se termine par -i, sans s ni t : ${ppBase}. Astuce : au féminin, on dit « ${ppBase}e », on n'entend ni s ni t.`);
+  else if (/[st]$/.test(ppBase)) out.push(`Le participe passé de « ${v.inf} » est « ${ppBase} ». Pour trouver la lettre muette de la fin, mets-le au féminin : « ${ppBase}e », on entend le ${ppBase.slice(-1)}.`);
+  else out.push(`Le participe passé de « ${v.inf} » est « ${ppBase} ». Il s'apprend par cœur.`);
+  return out;
+}
+function analyserPasseCompose(rep, item) {
+  const v = item.verbe, p = item.p, formes = conjPasseCompose(v);
+  const aux = auxDe(v), auxForme = (aux === 'être' ? ETRE_PR : AVOIR_PR)[p];
+  const pp = participe(v), ppBase = forme(pp);
+  const accords = aux === 'être' ? accordsPossibles(item) : [''];
+  const fPour = acc => ({ radical: auxForme + ' ' + pp.radical, term: pp.term + acc });
+  const bonne = forme(fPour(accordAffiche(accords)));
+  const trouve = accords.find(a => rep === auxForme + ' ' + ppBase + a);
+  if (trouve !== undefined) return { ok: true, bonne, formes, f: fPour(trouve) };
+
+  const d = [];
+  const exemple = `${item.sujet}${item.sujet.endsWith("'") ? '' : ' '}${auxForme} ${ppBase}${accords[0]}`;
+  const mots = rep.split(' ');
+  if (mots.length < 2) {
+    const autre = autreTempsDe(rep, item);
+    if (autre) d.push(autre);
+    if (rep === v.inf || accords.some(a => sansAccent(rep) === sansAccent(ppBase + a)))
+      d.push(`Il manque l'auxiliaire ! Au passé composé, il faut deux mots : l'auxiliaire ${aux} au présent (« ${auxForme} »), puis le participe passé (« ${ppBase} »).`);
+    else d.push(`Au passé composé, le verbe s'écrit en deux mots : l'auxiliaire (avoir ou être) au présent, puis le participe passé. Ici : « ${exemple} ».`);
+  } else {
+    const a = mots[0], ecrit = mots.slice(1).join(' ');
+    if (a !== auxForme) {
+      const homophone = { 'à': 'a', 'et': 'est', 'on': 'ont', 'son': 'sont' }[a];
+      if (homophone === auxForme) d.push(`« ${a} » est un autre mot qui se prononce pareil. Ici, c'est l'auxiliaire ${aux}, qui s'écrit « ${auxForme} » : ${exemple}.`);
+      else if (aux === 'être' && AVOIR_PR.includes(a)) d.push(`« ${v.inf} » se conjugue avec l'auxiliaire <b>être</b>, pas avoir : ${exemple}. Retiens : aller, venir, partir, sortir, arriver, rester, tomber et descendre se conjuguent avec être.`);
+      else if (aux === 'avoir' && ETRE_PR.includes(a)) d.push(`« ${v.inf} » se conjugue avec l'auxiliaire <b>avoir</b>, pas être : ${exemple}.`);
+      else d.push(`L'auxiliaire ${aux} doit être conjugué au présent avec ${sujetTexte(item)} : il faut « ${auxForme} » (tu as écrit « ${esc(a)} »).`);
+    }
+    if (!accords.some(x => ecrit === ppBase + x)) d.push(...diagParticipe(ecrit, v, ppBase, aux, accords, item));
+  }
+  return { ok: false, bonne, formes, f: fPour(accordAffiche(accords)), diags: [...new Set(d.filter(Boolean))] };
+}
+
 const TEMPS = {
-  present: { nom: 'Présent', au: 'au présent', disponible: true, conjuguer: conjPresent, conseil: conseilPresent, regle: reglePresent },
-  imparfait: { nom: 'Imparfait', au: 'à l\'imparfait', disponible: false },
-  futur: { nom: 'Futur simple', au: 'au futur simple', disponible: false },
-  passeCompose: { nom: 'Passé composé', au: 'au passé composé', disponible: false },
+  present: { nom: 'Présent', au: 'au présent', disponible: true, conjuguer: conjPresent, conseil: conseilPresent, regle: reglePresent, note: noteVerbe, cas: casPresent },
+  imparfait: { nom: 'Imparfait', au: 'à l\'imparfait', disponible: true, conjuguer: conjImparfait, conseil: conseilImparfait, regle: regleImparfait, note: noteImparfait, cas: casImparfait },
+  futur: { nom: 'Futur simple', au: 'au futur simple', disponible: true, conjuguer: conjFutur, conseil: conseilFutur, regle: regleFutur, note: noteFutur, cas: casFutur },
+  passeCompose: { nom: 'Passé composé', au: 'au passé composé', disponible: true, conjuguer: conjPasseCompose, conseil: conseilPasseCompose, regle: reglePasseCompose, analyser: analyserPasseCompose },
 };
 
 // ---------- Outils ----------
@@ -587,11 +816,11 @@ function tirerItem() {
 }
 function creerItem(verbe, p, temps) {
   const f = forme(TEMPS[temps].conjuguer(verbe)[p]);
-  let sujet, nom = false;
-  if (reglages.noms && NOMS[p] && Math.random() < 0.4) { sujet = pick(NOMS[p]); nom = true; }
+  let sujet, nom = false, genre = '?';
+  if (reglages.noms && NOMS[p] && Math.random() < 0.4) { const n = pick(NOMS[p]); sujet = n.t; genre = n.g; nom = true; }
   else if (p === 0 && commenceVoyelle(f)) sujet = 'j\'';
-  else sujet = pick(PRONOMS_TIRAGE[p]);
-  return { verbe, p, temps, sujet, nom };
+  else { sujet = pick(PRONOMS_TIRAGE[p]); genre = { il: 'm', ils: 'm', elle: 'f', elles: 'f' }[sujet] || '?'; }
+  return { verbe, p, temps, sujet, nom, genre };
 }
 
 function nouvelleSerie(items) {
@@ -669,21 +898,23 @@ function confettis(nombre = 70) {
 // ---------- Correction ----------
 function analyser(rep, item) {
   const T = TEMPS[item.temps], v = item.verbe, p = item.p;
+  if (T.analyser) return T.analyser(rep, item);
   const formes = T.conjuguer(v), f = formes[p], bonne = forme(f);
-  if (rep === bonne) return { ok: true, bonne, formes };
-  if (v.alts && v.alts[p] && v.alts[p].includes(rep)) return { ok: true, bonne, formes, note: `On peut aussi l'écrire « ${bonne} ».` };
+  if (rep === bonne) return { ok: true, bonne, formes, f };
+  if ((f.alts || []).includes(rep)) return { ok: true, bonne, formes, f, note: `On peut aussi l'écrire « ${bonne} ».` };
 
   const d = [];
-  const sujetTxt = item.nom ? `« ${item.sujet} » (on peut le remplacer par « ${PERSONNES[p].remplace} »)` : `« ${item.sujet.replace("'", '')}${item.sujet.endsWith("'") ? 'e' : ''} »`;
-  const homo = HOMOPHONES[v.inf] && HOMOPHONES[v.inf][p];
+  const sujetTxt = sujetTexte(item);
+  const homo = item.temps === 'present' && HOMOPHONES[v.inf] && HOMOPHONES[v.inf][p];
 
   if (homo && homo.faux.includes(rep)) {
     d.push(homo.msg);
   } else if (sansAccent(rep) === sansAccent(bonne)) {
     d.push(...diagAccents(rep, bonne));
-    const note = noteVerbe(v);
-    if (note && (v.mod || v.fam === 'connaitre' || v.inf === 'recevoir')) d.push(note);
+    const note = T.note(v);
+    if (note && (v.mod || v.fam === 'connaitre' || v.inf === 'recevoir' || item.temps !== 'present')) d.push(note);
   } else {
+    d.push(autreTempsDe(rep, item));
     // Forme d'une autre personne ?
     const autres = formes.map((x, i) => ({ i, f: forme(x) })).filter(x => x.i !== p && x.f === rep);
     if (autres.length) {
@@ -694,27 +925,39 @@ function analyser(rep, item) {
       d.push('Tu as écrit l\'infinitif, c\'est-à-dire le « nom » du verbe. Il faut le conjuguer : changer sa fin selon le sujet.');
       d.push(T.conseil(v, p, f.term));
     } else if (f.entier) {
-      d.push(T.conseil(v, p, f.term), noteVerbe(v));
+      d.push(T.conseil(v, p, f.term), T.note(v));
     } else {
-      const special = casParticuliers(v, p, rep, f, formes);
+      const special = T.cas(v, p, rep, f, formes);
       if (rep.startsWith(f.radical) && !special.radical) {
         const e = rep.slice(f.radical.length);
         d.push(`Le début du verbe (le radical « ${f.radical} ») est juste, mais la terminaison n'est pas bonne : tu as écrit ${e ? '« -' + esc(e) + ' »' : 'aucune terminaison'}, ${f.term ? 'il faut « -' + f.term + ' »' : 'alors qu\'il ne faut rien ajouter'}.`);
         d.push(...(special.msgs.length ? special.msgs : [T.conseil(v, p, f.term)]));
       } else if (f.term && rep.endsWith(f.term)) {
         d.push(`La terminaison « -${f.term} » est juste, mais le début du verbe (le radical) n'est pas bon : il faut « ${f.radical} », tu as écrit « ${esc(rep.slice(0, rep.length - f.term.length))} ».`);
-        d.push(noteVerbe(v) || 'Pour ce verbe, le radical change selon la personne : regarde le tableau ci-dessous.');
+        d.push(...(special.msgs.length ? special.msgs : [T.note(v) || 'Pour ce verbe, le radical change selon la personne : regarde le tableau ci-dessous.']));
       } else {
         d.push(`Il faut écrire « ${bonne} » : le radical est « ${f.radical} » et la terminaison ${f.term ? '« -' + f.term + ' »' : 'est vide (on n\'ajoute rien)'}.`);
         d.push(...(special.msgs.length ? special.msgs : [T.conseil(v, p, f.term)]));
-        const note = noteVerbe(v); if (note) d.push(note);
+        const note = T.note(v); if (note) d.push(note);
       }
     }
   }
-  return { ok: false, bonne, formes, diags: [...new Set(d.filter(Boolean))] };
+  return { ok: false, bonne, formes, f, diags: [...new Set(d.filter(Boolean))] };
 }
 
-function casParticuliers(v, p, rep, f, formes) {
+function sujetTexte(item) {
+  return item.nom ? `« ${item.sujet} » (on peut le remplacer par « ${PERSONNES[item.p].remplace} »)` : `« ${item.sujet.replace("'", '')}${item.sujet.endsWith("'") ? 'e' : ''} »`;
+}
+// La réponse est-elle juste… mais à un autre temps ?
+function autreTempsDe(rep, item) {
+  for (const [k, T2] of Object.entries(TEMPS)) {
+    if (k === item.temps || T2.analyser) continue;
+    if (forme(T2.conjuguer(item.verbe)[item.p]) === rep) return `« ${esc(rep)} », c'est le verbe ${T2.au}. Ici, il faut le conjuguer ${TEMPS[item.temps].au}.`;
+  }
+  return '';
+}
+
+function casPresent(v, p, rep, f, formes) {
   const msgs = []; let radical = false;
   if (p === 5 && f.term.endsWith('ent') && (rep === forme(formes[2]) || rep === f.radical + 'e' || rep === f.radical + 'es' || rep === f.radical + 's' || rep === f.radical))
     msgs.push('Le -ent de « ils / elles » ne s\'entend pas à l\'oral : c\'est pour ça qu\'on l\'oublie souvent. Mais à l\'écrit, il est obligatoire !');
@@ -754,7 +997,7 @@ function tableauHTML(formes, p) {
   return '<div class="tableau">' + ordre.map(i => {
     const f = formes[i], txt = forme(f);
     const corps = f.entier ? `<span class="rad">${txt}</span>` : `<span class="rad">${f.radical}</span>${f.term ? `<span class="term">${f.term}</span>` : ''}`;
-    return `<div class="p${i} ${i === p ? 'here' : ''}"><span class="pr">${pronomPour(i, txt)}</span>${corps}</div>`;
+    return `<div class="p${i} ${i === p ? 'here' : ''}"><span class="pr">${pronomPour(i, txt)}</span>${corps}${f.suffixe ? `<span class="accord">${f.suffixe}</span>` : ''}</div>`;
   }).join('') + '</div>';
 }
 function decompHTML(item, f) {
@@ -792,7 +1035,7 @@ $('form').addEventListener('submit', e => {
 });
 
 function afficherRetour(res, rep) {
-  const T = TEMPS[item.temps], f = res.formes[item.p];
+  const T = TEMPS[item.temps], f = res.f || res.formes[item.p];
   const fb = $('feedback');
   const dernier = serie.n >= serie.longueur;
   const btn = `<div class="next-row"><button class="btn ${res.ok ? 'ok' : 'ko'}" id="btn-suivant" type="button">${dernier ? 'Voir mon résultat' : 'Question suivante'} →</button></div>`;
@@ -803,7 +1046,7 @@ function afficherRetour(res, rep) {
     fb.className = 'feedback ok';
     fb.innerHTML = `<div class="verdict-row"><p class="verdict">${bravo}</p>${badge}</div>
       <div><span class="label">Ta réponse</span>${decompHTML(item, f)}</div>
-      <ul class="diag">${res.note ? `<li>${res.note}</li>` : ''}<li>${T.conseil(item.verbe, item.p, f.term)}</li></ul>${btn}`;
+      <ul class="diag">${res.note ? `<li>${res.note}</li>` : ''}<li>${T.conseil(item.verbe, item.p, f.term, item)}</li></ul>${btn}`;
     confettis(badge ? 120 : 60);
   } else {
     fb.className = 'feedback ko';
@@ -813,7 +1056,7 @@ function afficherRetour(res, rep) {
         <div><span class="label">La bonne réponse</span>${decompHTML(item, f)}</div>
       </div>
       <div><span class="label">Ce qui ne va pas</span><ul class="diag">${res.diags.map(x => `<li>${x}</li>`).join('')}</ul></div>
-      <div class="regle"><h3>La règle à retenir</h3>${T.regle(item.verbe, item.p)}</div>
+      <div class="regle"><h3>La règle à retenir</h3>${T.regle(item.verbe, item.p, item)}</div>
       <div><span class="label">« ${item.verbe.inf} » ${T.au}</span>${tableauHTML(res.formes, item.p)}</div>${btn}`;
   }
   fb.hidden = false;
