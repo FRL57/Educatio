@@ -1264,7 +1264,9 @@ let session = null, profil = null, vueCompte = null;
 
 function messageErreur(e) {
   const m = (e && e.message) || String(e);
-  if (/Invalid login credentials/i.test(m)) return 'E-mail ou mot de passe incorrect.';
+  if (/Invalid login credentials/i.test(m)) return 'E-mail, pseudo ou mot de passe incorrect.';
+  if (/trop_essais/i.test(m)) return 'Trop d\'essais ratés avec ce pseudo : attends 15 minutes, ou connecte-toi avec ton e-mail.';
+  if (/email_pour_connexion|PGRST202/i.test(m)) return 'La connexion avec le pseudo n\'est pas encore activée : connecte-toi avec ton e-mail.';
   if (/Email not confirmed/i.test(m)) return 'Ton adresse e-mail n\'est pas encore confirmée : clique sur le lien reçu par e-mail.';
   if (/already registered/i.test(m)) return 'Un compte existe déjà avec cet e-mail. Connecte-toi plutôt.';
   if (/Password should be/i.test(m)) return 'Le mot de passe doit faire au moins 8 caractères.';
@@ -1318,7 +1320,7 @@ function ouvrirCompte(vue) {
   if (vue === 'profil') { afficherProfil(c); return; }
   if (vue === 'connexion') c.innerHTML = `<h2>Mon compte</h2>${onglets}
     <form class="formulaire" id="f-compte" novalidate>
-      <label class="champ">E-mail<input id="c-email" type="email" autocomplete="email" inputmode="email" autocapitalize="off"></label>
+      <label class="champ">E-mail ou pseudo<input id="c-email" type="text" autocomplete="username" autocapitalize="off" spellcheck="false"></label>
       <label class="champ">Mot de passe<input id="c-mdp" type="password" autocomplete="current-password"></label>
       <p class="hint" id="c-msg"></p>
       <div class="panel-foot"><button type="button" class="lien" data-vue="oubli">Mot de passe oublié ?</button><button class="btn" type="submit">Me connecter</button></div>
@@ -1356,9 +1358,17 @@ function ouvrirCompte(vue) {
 
 const ACTIONS_COMPTE = {
   async connexion() {
-    const email = valeur('c-email').toLowerCase(), password = $('c-mdp').value;
-    if (!email || !password) return msgCompte('Écris ton e-mail et ton mot de passe.');
+    const identifiant = valeur('c-email'), password = $('c-mdp').value;
+    if (!identifiant || !password) return msgCompte('Écris ton e-mail ou ton pseudo, et ton mot de passe.');
     msgCompte('Connexion…', true);
+    let email = identifiant.toLowerCase();
+    if (!identifiant.includes('@')) {
+      // Pseudo : le serveur rend l'e-mail du compte seulement si le mot de passe est le bon
+      const { data, error } = await appel(sb.rpc('email_pour_connexion', { p_pseudo: identifiant, p_mdp: password }));
+      if (error) return msgCompte(messageErreur(error));
+      if (!data) return msgCompte('Pseudo ou mot de passe incorrect.');
+      email = data;
+    }
     const { error } = await sb.auth.signInWithPassword({ email, password });
     if (error) msgCompte(messageErreur(error));
     // Si c'est bon, le changement de session charge le profil et affiche le compte.
