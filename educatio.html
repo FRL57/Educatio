@@ -1,4 +1,4 @@
-<title>Conjugo</title>
+<title>Educatio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;700&family=Kalam:wght@700&display=swap">
@@ -172,7 +172,7 @@ legend { font-weight: 500; margin-bottom: 6px; padding: 0; }
 <div class="wrap">
   <header>
     <div class="brand">
-      <h1>Conju<span>go</span></h1>
+      <h1>Educa<span>tio</span></h1>
       <p>Entraînement à la conjugaison · 6e</p>
     </div>
     <button class="btn ghost" id="btn-reglages" type="button">Réglages</button>
@@ -238,7 +238,7 @@ legend { font-weight: 500; margin-bottom: 6px; padding: 0; }
 
 <script>
 /* =====================================================================
-   CONJUGO — architecture
+   EDUCATIO — architecture
    - PERSONNES : les 6 personnes de conjugaison.
    - VERBES    : la liste des verbes. Les verbes réguliers (1er et 2e groupe)
                  sont calculés ; les verbes du 3e groupe donnent leurs formes
@@ -493,7 +493,7 @@ function nomAccent(c) {
 }
 
 // ---------- Stockage (confort, facultatif) ----------
-const STORE = 'conjugo-v1';
+const STORE = 'educatio-v1';
 function lireStats() {
   try { return Object.assign({ total: 0, bonnes: 0, record: 0, fautes: {}, reglages: null }, JSON.parse(localStorage.getItem(STORE) || '{}')); }
   catch (e) { return { total: 0, bonnes: 0, record: 0, fautes: {}, reglages: null }; }

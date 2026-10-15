@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#10172b" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Conjugo">
+<meta name="apple-mobile-web-app-title" content="Educatio">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -21,7 +21,7 @@
   .install { background: var(--accent-soft); color: var(--ink); border-radius: 12px; padding: 12px 14px; font-size: .92rem; display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
   .install button { background: none; border: 0; color: var(--accent); font-weight: 700; padding: 0 4px; }
 </style>
-<title>Conjugo</title>
+<title>Educatio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;700&family=Kalam:wght@700&display=swap">
@@ -197,7 +197,7 @@ legend { font-weight: 500; margin-bottom: 6px; padding: 0; }
 <div class="wrap">
   <header>
     <div class="brand">
-      <h1>Conju<span>go</span></h1>
+      <h1>Educa<span>tio</span></h1>
       <p>Entraînement à la conjugaison · 6e</p>
     </div>
     <button class="btn ghost" id="btn-reglages" type="button">Réglages</button>
@@ -263,7 +263,7 @@ legend { font-weight: 500; margin-bottom: 6px; padding: 0; }
 
 <script>
 /* =====================================================================
-   CONJUGO — architecture
+   EDUCATIO — architecture
    - PERSONNES : les 6 personnes de conjugaison.
    - VERBES    : la liste des verbes. Les verbes réguliers (1er et 2e groupe)
                  sont calculés ; les verbes du 3e groupe donnent leurs formes
@@ -518,7 +518,7 @@ function nomAccent(c) {
 }
 
 // ---------- Stockage (confort, facultatif) ----------
-const STORE = 'conjugo-v1';
+const STORE = 'educatio-v1';
 function lireStats() {
   try { return Object.assign({ total: 0, bonnes: 0, record: 0, fautes: {}, reglages: null }, JSON.parse(localStorage.getItem(STORE) || '{}')); }
   catch (e) { return { total: 0, bonnes: 0, record: 0, fautes: {}, reglages: null }; }
@@ -814,12 +814,12 @@ nouvelleSerie();
   (function () {
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
     const installee = window.navigator.standalone || matchMedia('(display-mode: standalone)').matches;
-    let vu = false; try { vu = localStorage.getItem('conjugo-install-vu') === '1'; } catch (e) {}
+    let vu = false; try { vu = localStorage.getItem('educatio-install-vu') === '1'; } catch (e) {}
     if (!ios || installee || vu) return;
     const d = document.createElement('div');
     d.className = 'install';
-    d.innerHTML = '<span>Pour installer Conjugo sur l\'iPhone : touche le bouton <b>Partager</b> de Safari, puis <b>Sur l\'écran d\'accueil</b>.</span><button type="button" aria-label="Fermer">OK</button>';
-    d.querySelector('button').onclick = () => { d.remove(); try { localStorage.setItem('conjugo-install-vu', '1'); } catch (e) {} };
+    d.innerHTML = '<span>Pour installer Educatio sur l\'iPhone : touche le bouton <b>Partager</b> de Safari, puis <b>Sur l\'écran d\'accueil</b>.</span><button type="button" aria-label="Fermer">OK</button>';
+    d.querySelector('button').onclick = () => { d.remove(); try { localStorage.setItem('educatio-install-vu', '1'); } catch (e) {} };
     document.querySelector('.wrap').prepend(d);
   })();
 </script>

@@ -1,6 +1,6 @@
-"""Construit la webapp (index.html, manifest, service worker, icônes) à partir de conjugo.html.
+"""Construit la webapp (index.html, manifest, service worker, icônes) à partir de educatio.html.
 
-conjugo.html reste la source unique : on modifie ce fichier, puis on lance
+educatio.html reste la source unique : on modifie ce fichier, puis on lance
     python build.py
 et on pousse le résultat sur GitHub (Vercel redéploie tout seul).
 """
@@ -11,7 +11,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 ICI = Path(__file__).parent
-SOURCE = (ICI / "conjugo.html").read_text(encoding="utf-8")
+SOURCE = (ICI / "educatio.html").read_text(encoding="utf-8")
 
 TETE = """<!doctype html>
 <html lang="fr">
@@ -22,7 +22,7 @@ TETE = """<!doctype html>
 <meta name="theme-color" content="#10172b" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Conjugo">
+<meta name="apple-mobile-web-app-title" content="Educatio">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -46,12 +46,12 @@ PIED = """
   (function () {
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
     const installee = window.navigator.standalone || matchMedia('(display-mode: standalone)').matches;
-    let vu = false; try { vu = localStorage.getItem('conjugo-install-vu') === '1'; } catch (e) {}
+    let vu = false; try { vu = localStorage.getItem('educatio-install-vu') === '1'; } catch (e) {}
     if (!ios || installee || vu) return;
     const d = document.createElement('div');
     d.className = 'install';
-    d.innerHTML = '<span>Pour installer Conjugo sur l\\'iPhone : touche le bouton <b>Partager</b> de Safari, puis <b>Sur l\\'écran d\\'accueil</b>.</span><button type="button" aria-label="Fermer">OK</button>';
-    d.querySelector('button').onclick = () => { d.remove(); try { localStorage.setItem('conjugo-install-vu', '1'); } catch (e) {} };
+    d.innerHTML = '<span>Pour installer Educatio sur l\\'iPhone : touche le bouton <b>Partager</b> de Safari, puis <b>Sur l\\'écran d\\'accueil</b>.</span><button type="button" aria-label="Fermer">OK</button>';
+    d.querySelector('button').onclick = () => { d.remove(); try { localStorage.setItem('educatio-install-vu', '1'); } catch (e) {} };
     document.querySelector('.wrap').prepend(d);
   })();
 </script>
@@ -93,8 +93,8 @@ icone(512).save(ICI / "icons/icon-512.png")
 icone(512, marge_sure=True).save(ICI / "icons/icon-maskable-512.png")
 
 manifest = {
-    "name": "Conjugo",
-    "short_name": "Conjugo",
+    "name": "Educatio",
+    "short_name": "Educatio",
     "description": "Entraînement à la conjugaison pour la 6e.",
     "lang": "fr",
     "start_url": "./",

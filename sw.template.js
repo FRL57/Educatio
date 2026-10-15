@@ -1,6 +1,6 @@
-// Service worker de Conjugo : l'appli marche aussi sans connexion.
+// Service worker d'Educatio : l'appli marche aussi sans connexion.
 // Fichier généré par build.py à partir de sw.template.js : ne pas modifier sw.js à la main.
-const CACHE = 'conjugo-__VERSION__';
+const CACHE = 'educatio-__VERSION__';
 const FICHIERS = ['./', 'index.html', 'manifest.webmanifest', 'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
