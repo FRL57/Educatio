@@ -240,6 +240,31 @@ legend { font-family: var(--font-display); font-weight: 600; font-size: 1.1rem; 
 .historique li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; padding: 8px 12px; border-radius: 12px; background: var(--bg); }
 .code { font-family: var(--font-display); letter-spacing: .15em; color: var(--ink); background: var(--sun-soft); padding: 2px 8px; border-radius: 8px; }
 
+/* Amis */
+.pastille { display: inline-grid; place-items: center; min-width: 22px; height: 22px; margin-left: 6px; padding: 0 6px; border-radius: 999px;
+  background: var(--red); color: var(--on-color); font-size: .8rem; line-height: 1; vertical-align: 2px; }
+.hors-ligne #btn-amis { display: none !important; }
+.mon-code { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px 16px; padding: 14px 16px; border-radius: 16px; background: var(--sun-soft); }
+.code.grand { font-size: 1.9rem; padding: 2px 10px; background: var(--surface); }
+.ajout-ami { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+.ajout-ami .champ { flex: 1 1 220px; min-width: 0; }
+.ajout-ami input { text-transform: uppercase; letter-spacing: .15em; font-family: var(--font-display); font-weight: 600; }
+.liste-amis { display: grid; gap: 16px; }
+.demandes, .amis { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.demandes li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 10px 14px; border-radius: 14px; background: var(--bg); }
+.demandes .boutons { display: flex; gap: 8px; flex-wrap: wrap; }
+.ami { display: grid; gap: 8px; padding: 12px 14px; border-radius: 16px; background: var(--bg); border-left: 6px solid var(--pc, var(--accent)); }
+.ami.moi { border-left-color: var(--accent); background: var(--accent-soft); }
+.ami.vide { border-left-color: var(--line); color: var(--ink-soft); }
+.ami-tete { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.ami-tete b { font-family: var(--font-display); font-size: 1.2rem; }
+.ami-tete span { color: var(--ink-soft); font-size: .88rem; }
+.ami-chiffres { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .92rem; color: var(--ink-soft); }
+.ami-chiffres b { font-family: var(--font-display); font-size: 1.1rem; color: var(--ink); font-variant-numeric: tabular-nums; }
+.ami-actions { display: flex; flex-wrap: wrap; gap: 4px 18px; }
+.ami .historique li { background: var(--surface); }
+.lien.danger { color: var(--red); }
+
 /* Fin de série */
 .etoiles { display: flex; gap: 6px; }
 .etoiles svg { width: 54px; height: 54px; fill: var(--line); }
@@ -285,6 +310,7 @@ legend { font-family: var(--font-display); font-weight: 600; font-size: 1.1rem; 
     <div class="actions-tete">
       <span class="pill pill-hl">Hors ligne</span>
       <button class="btn ghost" id="btn-quitter-hl" type="button">Me connecter</button>
+      <button class="btn ghost" id="btn-amis" type="button" hidden>Amis<span class="pastille" id="nb-demandes" hidden>0</span></button>
       <button class="btn ghost" id="btn-compte" type="button" hidden>Mon compte</button>
       <button class="btn ghost" id="btn-reglages" type="button">Réglages</button>
     </div>
@@ -1460,13 +1486,14 @@ function majBoutonCompte() {
 }
 
 async function chargerProfil() {
-  if (!session) { profil = null; majBoutonCompte(); return; }
+  if (!session) { profil = null; amis = null; majBoutonCompte(); majBoutonAmis(); return; }
   const { data, error } = await sb.from('profils').select('*').eq('id', session.user.id).maybeSingle();
   if (error) return;
   profil = data;
   // Les verbes ratés sur un autre appareil reviennent aussi plus souvent ici
   if (profil) for (const [k, n] of Object.entries(profil.fautes || {})) stats.fautes[k] = Math.max(stats.fautes[k] || 0, n);
   majBoutonCompte();
+  rafraichirAmis();
   envoyerEnAttente();
   if (!$('compte').hidden && vueCompte === 'profil') ouvrirCompte('profil');
 }
@@ -1494,6 +1521,7 @@ function ouvrirCompte(vue) {
       <button type="button" class="${vue === 'inscription' ? 'actif' : ''}" data-vue="inscription">Créer un compte</button>
     </div>`;
   if (vue === 'profil') { afficherProfil(c); return; }
+  if (vue === 'amis') { afficherAmis(c); return; }
   const titre = session ? '<h2>Mon compte</h2>'
     : '<div class="accueil"><h2>Bienvenue sur Educatio !</h2><p>Connecte-toi pour jouer, ou crée ton compte si c\'est ta première fois.</p></div>';
   if (vue === 'connexion') c.innerHTML = `${titre}${onglets}
@@ -1601,19 +1629,148 @@ async function afficherProfil(c) {
       <div><b>${profil.record}</b><span>record d'affilée</span></div>
     </div>
     <div><span class="label">Mes dernières séries</span><ul class="historique" id="historique"><li>Chargement…</li></ul></div>
-    <p class="stats">Ton code ami : <b class="code">${esc(profil.code_ami)}</b>. Bientôt, tu pourras le donner à tes copains pour suivre vos progrès et vous lancer des défis.</p>
+    <p class="stats">Ton code ami : <b class="code">${esc(profil.code_ami)}</b>. Donne-le à tes copains pour suivre vos progrès : <button type="button" class="lien" data-vue="amis">voir mes amis</button>.</p>
     <div class="panel-foot">
       <button class="btn ghost" type="button" id="btn-deconnexion">Me déconnecter</button>
       <button class="btn" type="button" id="btn-jouer">Jouer</button>
     </div>`;
   $('btn-deconnexion').onclick = async () => { vueCompte = null; await sb.auth.signOut(); };
   $('btn-jouer').onclick = () => { $('compte').hidden = true; $('answer').focus(); };
+  c.querySelectorAll('[data-vue]').forEach(b => b.onclick = () => ouvrirCompte(b.dataset.vue));
   const { data } = await sb.from('series').select('temps, score, longueur, exceptions, joue_le').order('joue_le', { ascending: false }).limit(5);
   const h = $('historique'); if (!h) return;
   h.innerHTML = data && data.length
     ? data.map(s => `<li><span>${new Date(s.joue_le).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
         <span>${s.temps.map(t => TEMPS[t] ? TEMPS[t].nom : esc(t)).join(', ')}${s.exceptions ? ' · exceptions' : ''}</span><b>${s.score} / ${s.longueur}</b></li>`).join('')
     : '<li>Pas encore de série terminée. À toi de jouer !</li>';
+}
+
+// ---------- Amis (code ami) ----------
+let amis = null; // null : la fonction n'existe pas encore côté serveur
+const CODE_OK = /^[A-HJ-NP-Z2-9]{6}$/;
+
+function ilYa(date) {
+  if (!date) return 'n\'a pas encore joué';
+  const jours = Math.floor((Date.now() - new Date(date)) / 86400000);
+  if (jours <= 0) return 'a joué aujourd\'hui';
+  if (jours === 1) return 'a joué hier';
+  return `a joué il y a ${jours} jours`;
+}
+
+async function rafraichirAmis() {
+  if (!sb || !session) { amis = null; majBoutonAmis(); return; }
+  const { data, error } = await appel(sb.rpc('mes_amis'));
+  amis = error ? null : data;
+  majBoutonAmis();
+}
+function majBoutonAmis() {
+  const b = $('btn-amis');
+  b.hidden = !profil || amis === null;
+  const n = (amis || []).filter(a => a.etat === 'recue').length;
+  $('nb-demandes').hidden = !n;
+  $('nb-demandes').textContent = n;
+  b.setAttribute('aria-label', n ? `Amis, ${n} demande${n > 1 ? 's' : ''} reçue${n > 1 ? 's' : ''}` : 'Amis');
+}
+
+async function afficherAmis(c) {
+  c.innerHTML = `<h2>Mes amis</h2>
+    <div class="mon-code">
+      <div><span class="label">Ton code ami</span><b class="code grand" id="mon-code">${esc(profil ? profil.code_ami : '……')}</b></div>
+      <button class="btn ghost" type="button" id="btn-copier-code">Copier</button>
+    </div>
+    <p class="stats">Donne ce code à un copain, en vrai ou par un message de tes parents. Avec ton code, il peut t'envoyer une demande.</p>
+    <form class="ajout-ami" id="f-ami" novalidate>
+      <label class="champ">Ajouter un ami avec son code<input id="c-code" type="text" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Ex. : K7P3QX"></label>
+      <button class="btn" type="submit">Envoyer la demande</button>
+    </form>
+    <p class="hint" id="c-msg"></p>
+    <div id="liste-amis" class="liste-amis"><p>Chargement…</p></div>`;
+  $('btn-copier-code').onclick = () => {
+    const code = profil ? profil.code_ami : '';
+    navigator.clipboard.writeText(code).then(() => msgCompte('Code copié !', true)).catch(() => {
+      const r = document.createRange(); r.selectNodeContents($('mon-code'));
+      const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      msgCompte('Code sélectionné : tu peux le copier.', true);
+    });
+  };
+  $('c-code').oninput = e => { e.target.value = e.target.value.toUpperCase().replace(/\s/g, ''); };
+  $('f-ami').onsubmit = async e => {
+    e.preventDefault();
+    const code = valeur('c-code').toUpperCase();
+    if (/[0O1I]/.test(code)) return msgCompte('Un code ami ne contient jamais de O, de 0, de I ni de 1 : vérifie le code.');
+    if (!CODE_OK.test(code)) return msgCompte('Un code ami fait 6 caractères (lettres et chiffres).');
+    msgCompte('Envoi…', true);
+    const { data, error } = await appel(sb.rpc('demander_ami', { p_code: code }));
+    if (error) return msgCompte(messageErreur(error));
+    const [etat, pseudo] = String(data).split(':');
+    const nom = esc(pseudo || '');
+    const textes = {
+      envoyee: [`Demande envoyée à ${nom} ! Vous serez amis quand ${nom} l'aura acceptée.`, true],
+      acceptee: [`${nom} t'avait déjà envoyé une demande : vous êtes maintenant amis !`, true],
+      deja_amis: [`Tu es déjà ami avec ${nom}.`, true],
+      deja_demandee: [`Tu as déjà envoyé une demande à ${nom} : il faut attendre sa réponse.`, true],
+      soi_meme: ['C\'est ton propre code ! Demande celui de ton copain.', false],
+      introuvable: ['Aucun compte n\'a ce code. Vérifie les 6 caractères avec ton copain.', false],
+      trop_essais: ['Trop de codes faux d\'affilée : réessaie dans une heure.', false],
+    };
+    const [texte, ok] = textes[etat] || ['Ça n\'a pas marché, réessaie.', false];
+    msgCompte(texte, ok);
+    if (ok) $('c-code').value = '';
+    await rafraichirAmis(); rendreAmis();
+  };
+  await rafraichirAmis();
+  rendreAmis();
+}
+
+function carteChiffres(x) {
+  const pct = x.reponses ? Math.round(100 * x.bonnes / x.reponses) : 0;
+  return `<div class="ami-chiffres">
+      <span><b>${x.series_jouees}</b> séries</span><span><b>${pct} %</b> réussite</span>
+      <span><b>${x.record}</b> record</span>${x.series_7j == null ? '' : `<span><b>${x.series_7j}</b> cette semaine</span>`}</div>`;
+}
+
+function rendreAmis() {
+  const zone = $('liste-amis'); if (!zone) return;
+  if (amis === null) { zone.innerHTML = '<p class="stats">Les amis ne sont pas encore activés sur le serveur.</p>'; return; }
+  const recues = amis.filter(a => a.etat === 'recue'), envoyees = amis.filter(a => a.etat === 'envoyee'), copains = amis.filter(a => a.etat === 'ami');
+  let html = '';
+  if (recues.length) html += `<div><span class="label">Demandes reçues</span><ul class="demandes">${recues.map(a => `
+      <li><b>${esc(a.pseudo)}</b> veut être ton ami.
+        <span class="boutons"><button class="btn ok" type="button" data-accepter="${a.lien}">Accepter</button>
+        <button class="btn ghost" type="button" data-refuser="${a.lien}">Refuser</button></span></li>`).join('')}</ul></div>`;
+  html += `<div><span class="label">Mes amis</span><ul class="amis">`;
+  if (profil) html += `<li class="ami moi"><div class="ami-tete"><b>Toi</b><span>${esc(profil.pseudo)}</span></div>${carteChiffres({ ...profil, series_7j: null })}</li>`;
+  html += copains.length ? copains.map((a, i) => `
+      <li class="ami p${(i + 1) % 6}"><div class="ami-tete"><b>${esc(a.pseudo)}</b><span>${ilYa(a.derniere_serie)}</span></div>
+        ${carteChiffres(a)}
+        <div class="ami-actions"><button class="lien" type="button" data-voir="${a.ami}">Voir ses séries</button>
+          <button class="lien danger" type="button" data-retirer="${a.lien}">Retirer</button></div>
+        <ul class="historique" id="hist-${a.ami}" hidden></ul></li>`).join('')
+    : '<li class="vide">Pas encore d\'ami. Envoie une demande avec le code d\'un copain !</li>';
+  html += '</ul></div>';
+  if (envoyees.length) html += `<div><span class="label">Demandes envoyées</span><ul class="demandes">${envoyees.map(a => `
+      <li><b>${esc(a.pseudo)}</b> n'a pas encore répondu.
+        <span class="boutons"><button class="lien" type="button" data-retirer="${a.lien}">Annuler</button></span></li>`).join('')}</ul></div>`;
+  zone.innerHTML = html;
+
+  const agir = async (requete) => { const { error } = await appel(requete); if (error) msgCompte(messageErreur(error)); await rafraichirAmis(); rendreAmis(); };
+  zone.querySelectorAll('[data-accepter]').forEach(b => b.onclick = () => agir(sb.rpc('repondre_ami', { p_lien: +b.dataset.accepter, p_accepter: true })));
+  zone.querySelectorAll('[data-refuser]').forEach(b => b.onclick = () => agir(sb.rpc('repondre_ami', { p_lien: +b.dataset.refuser, p_accepter: false })));
+  zone.querySelectorAll('[data-retirer]').forEach(b => b.onclick = () => {
+    // Deux appuis : le premier demande confirmation
+    if (!b.dataset.confirme) { b.dataset.confirme = '1'; b.textContent = 'Sûr ? Appuie encore'; return; }
+    agir(sb.rpc('retirer_ami', { p_lien: +b.dataset.retirer }));
+  });
+  zone.querySelectorAll('[data-voir]').forEach(b => b.onclick = async () => {
+    const h = $('hist-' + b.dataset.voir);
+    if (!h.hidden) { h.hidden = true; b.textContent = 'Voir ses séries'; return; }
+    h.hidden = false; b.textContent = 'Cacher ses séries'; h.innerHTML = '<li>Chargement…</li>';
+    const { data, error } = await appel(sb.rpc('series_ami', { p_ami: b.dataset.voir }));
+    h.innerHTML = error ? `<li>${messageErreur(error)}</li>` : data.length
+      ? data.map(s => `<li><span>${new Date(s.joue_le).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
+          <span>${s.temps.map(t => TEMPS[t] ? TEMPS[t].nom : esc(t)).join(', ')}${s.exceptions ? ' · exceptions' : ''}</span><b>${s.score} / ${s.longueur}</b></li>`).join('')
+      : '<li>Pas encore de série terminée.</li>';
+  });
 }
 
 // Enregistrement des séries ; sans réseau, elles attendent dans le téléphone
@@ -1655,13 +1812,19 @@ function quitterHorsLigne(versConnexion = true) {
 
 function initCompte() {
   $('btn-quitter-hl').onclick = () => quitterHorsLigne();
+  $('btn-amis').onclick = () => {
+    if (!$('compte').hidden && vueCompte === 'amis') { $('compte').hidden = true; return; }
+    ouvrirCompte('amis');
+  };
+  // Quand on revient sur l'appli, on regarde s'il y a de nouvelles demandes
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && session) rafraichirAmis(); });
   majBoutonCompte();
   if (!sb) return;
   // En attendant de savoir si un compte est déjà connecté, on ne montre pas le jeu
   document.body.classList.add('porte-fermee');
   $('jeu').hidden = true;
   $('btn-compte').onclick = () => {
-    if (!$('compte').hidden) { $('compte').hidden = true; return; }
+    if (!$('compte').hidden && vueCompte !== 'amis') { $('compte').hidden = true; return; }
     ouvrirCompte(profil ? 'profil' : 'connexion');
   };
   sb.auth.onAuthStateChange((evenement, s) => {
