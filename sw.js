@@ -1,6 +1,6 @@
 // Service worker d'Educatio : l'appli marche aussi sans connexion.
 // Fichier généré par build.py à partir de sw.template.js : ne pas modifier sw.js à la main.
-const CACHE = 'educatio-27a684162d';
+const CACHE = 'educatio-04176415b6';
 const FICHIERS = ['./', 'index.html', 'manifest.webmanifest', 'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
